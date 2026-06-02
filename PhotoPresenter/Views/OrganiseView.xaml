@@ -25,14 +25,24 @@
                      BorderThickness="0"
                      AllowDrop="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     KeyDown="FolderList_KeyDown"
                      PreviewMouseLeftButtonDown="FolderList_PreviewMouseLeftButtonDown"
                      PreviewMouseMove="FolderList_PreviewMouseMove"
                      DragOver="FolderList_DragOver"
+                     DragLeave="FolderList_DragLeave"
                      Drop="FolderList_Drop">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Padding" Value="4"/>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu>
+                                    <MenuItem Header="Remove from Presentation"
+                                              Click="FolderRemove_Click"/>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
@@ -73,9 +83,11 @@
                      Background="#F8F8F8"
                      AllowDrop="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     KeyDown="PhotoList_KeyDown"
                      PreviewMouseLeftButtonDown="PhotoList_PreviewMouseLeftButtonDown"
                      PreviewMouseMove="PhotoList_PreviewMouseMove"
                      DragOver="PhotoList_DragOver"
+                     DragLeave="PhotoList_DragLeave"
                      Drop="PhotoList_Drop">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -86,6 +98,14 @@
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="4"/>
                         <Setter Property="Margin" Value="2"/>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu>
+                                    <MenuItem Header="Remove from Presentation"
+                                              Click="PhotoRemove_Click"/>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>

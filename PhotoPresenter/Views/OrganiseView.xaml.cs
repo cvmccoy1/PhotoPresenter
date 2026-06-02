@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using PhotoPresenter.ViewModels;
@@ -9,12 +10,22 @@ namespace PhotoPresenter.Views;
 public partial class OrganiseView : UserControl
 {
     private Point _dragStartPoint;
+    private InsertionAdorner? _adorner;
 
     public OrganiseView() => InitializeComponent();
 
     private OrganiseViewModel? Vm => DataContext as OrganiseViewModel;
 
     // ── Folder list ────────────────────────────────────────────────────────────
+
+    private void FolderList_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete && Vm?.SelectedFolder != null)
+        {
+            Vm.RemoveFolder(Vm.SelectedFolder);
+            e.Handled = true;
+        }
+    }
 
     private void FolderList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -33,26 +44,54 @@ public partial class OrganiseView : UserControl
 
     private void FolderList_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(typeof(PhotoFolderViewModel))
-            ? DragDropEffects.Move
-            : DragDropEffects.None;
+        if (!e.Data.GetDataPresent(typeof(PhotoFolderViewModel)))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+        e.Effects = DragDropEffects.Move;
+
+        var container = HitTestContainer(FolderList, e.GetPosition(FolderList));
+        if (container != null)
+        {
+            var pos = e.GetPosition(container);
+            bool insertBefore = pos.Y < container.ActualHeight / 2;
+            SetFolderAdorner(container, insertBefore);
+        }
         e.Handled = true;
     }
 
+    private void FolderList_DragLeave(object sender, DragEventArgs e) => RemoveAdorner();
+
     private void FolderList_Drop(object sender, DragEventArgs e)
     {
+        RemoveAdorner();
         if (!e.Data.GetDataPresent(typeof(PhotoFolderViewModel))) return;
         var dragging = (PhotoFolderViewModel)e.Data.GetData(typeof(PhotoFolderViewModel));
-        var target = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
-        if (target == null || ReferenceEquals(dragging, target) || Vm == null) return;
 
-        int from = Vm.Folders.IndexOf(dragging);
-        int to = Vm.Folders.IndexOf(target);
-        if (from >= 0 && to >= 0)
-            Vm.ReorderFolder(from, to);
+        int to = GetDropIndex(FolderList, e.GetPosition(FolderList));
+        int from = Vm?.Folders.IndexOf(dragging) ?? -1;
+        if (from >= 0 && to >= 0 && from != to)
+            Vm!.ReorderFolder(from, to);
+    }
+
+    private void FolderRemove_Click(object sender, RoutedEventArgs e)
+    {
+        var folder = ContextMenuTarget<PhotoFolderViewModel>(sender);
+        if (folder != null) Vm?.RemoveFolder(folder);
     }
 
     // ── Photo list ─────────────────────────────────────────────────────────────
+
+    private void PhotoList_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete && PhotoList.SelectedItem is PhotoItemViewModel photo)
+        {
+            Vm?.RemovePhoto(photo);
+            e.Handled = true;
+        }
+    }
 
     private void PhotoList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -71,14 +110,27 @@ public partial class OrganiseView : UserControl
 
     private void PhotoList_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(typeof(PhotoItemViewModel))
-            ? DragDropEffects.Move
-            : DragDropEffects.None;
+        if (!e.Data.GetDataPresent(typeof(PhotoItemViewModel)))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+        e.Effects = DragDropEffects.Move;
+
+        // For the wrap-panel list highlight the target item with a left-edge adorner
+        var container = HitTestContainer(PhotoList, e.GetPosition(PhotoList));
+        if (container != null)
+            SetFolderAdorner(container, insertBefore: true);
+
         e.Handled = true;
     }
 
+    private void PhotoList_DragLeave(object sender, DragEventArgs e) => RemoveAdorner();
+
     private void PhotoList_Drop(object sender, DragEventArgs e)
     {
+        RemoveAdorner();
         if (!e.Data.GetDataPresent(typeof(PhotoItemViewModel))) return;
         var dragging = (PhotoItemViewModel)e.Data.GetData(typeof(PhotoItemViewModel));
         var target = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
@@ -87,9 +139,34 @@ public partial class OrganiseView : UserControl
         var photos = Vm.Photos;
         if (photos == null) return;
         int from = photos.IndexOf(dragging);
-        int to = photos.IndexOf(target);
+        int to   = photos.IndexOf(target);
         if (from >= 0 && to >= 0)
             Vm.ReorderPhoto(from, to);
+    }
+
+    private void PhotoRemove_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) Vm?.RemovePhoto(photo);
+    }
+
+    // ── Insertion adorner ──────────────────────────────────────────────────────
+
+    private void SetFolderAdorner(ListBoxItem container, bool insertBefore)
+    {
+        if (_adorner?.AdornedElement == container && _adorner.InsertBefore == insertBefore) return;
+        RemoveAdorner();
+        var layer = AdornerLayer.GetAdornerLayer(container);
+        if (layer == null) return;
+        _adorner = new InsertionAdorner(container, insertBefore);
+        layer.Add(_adorner);
+    }
+
+    private void RemoveAdorner()
+    {
+        if (_adorner == null) return;
+        AdornerLayer.GetAdornerLayer(_adorner.AdornedElement)?.Remove(_adorner);
+        _adorner = null;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -100,13 +177,38 @@ public partial class OrganiseView : UserControl
 
     private static T? HitTestItem<T>(ListBox listBox, Point position) where T : class
     {
+        var container = HitTestContainer(listBox, position);
+        return container?.DataContext as T;
+    }
+
+    private static ListBoxItem? HitTestContainer(ListBox listBox, Point position)
+    {
         var element = listBox.InputHitTest(position) as DependencyObject;
         while (element != null && element != listBox)
         {
-            if (element is ListBoxItem lbi && lbi.DataContext is T vm)
-                return vm;
+            if (element is ListBoxItem lbi) return lbi;
             element = VisualTreeHelper.GetParent(element);
         }
+        return null;
+    }
+
+    private static int GetDropIndex(ListBox listBox, Point position)
+    {
+        for (int i = 0; i < listBox.Items.Count; i++)
+        {
+            var container = listBox.ItemContainerGenerator.ContainerFromIndex(i) as ListBoxItem;
+            if (container == null) continue;
+            var topLeft = container.TranslatePoint(new Point(0, 0), listBox);
+            if (position.Y < topLeft.Y + container.ActualHeight / 2)
+                return i;
+        }
+        return Math.Max(0, listBox.Items.Count - 1);
+    }
+
+    private static T? ContextMenuTarget<T>(object menuItemSender) where T : class
+    {
+        if (menuItemSender is MenuItem { Parent: ContextMenu { PlacementTarget: ListBoxItem { DataContext: T item } } })
+            return item;
         return null;
     }
 }

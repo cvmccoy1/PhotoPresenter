@@ -46,4 +46,19 @@ public partial class OrganiseViewModel : ObservableObject
         SelectedFolder.Photos.Move(from, to);
         _library.SavePhotoOrder(SelectedFolder.Model, SelectedFolder.Photos.Select(p => p.Model));
     }
+
+    public void RemoveFolder(PhotoFolderViewModel folder)
+    {
+        Folders.Remove(folder);
+        if (SelectedFolder == folder)
+            SelectedFolder = Folders.FirstOrDefault();
+        _library.SaveFolderOrder(ParentFolderPath, Folders.Select(f => f.Model));
+    }
+
+    public void RemovePhoto(PhotoItemViewModel photo)
+    {
+        if (SelectedFolder == null) return;
+        SelectedFolder.Photos.Remove(photo);
+        _library.SavePhotoOrder(SelectedFolder.Model, SelectedFolder.Photos.Select(p => p.Model));
+    }
 }

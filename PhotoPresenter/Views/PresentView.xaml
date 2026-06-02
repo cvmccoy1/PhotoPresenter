@@ -15,16 +15,20 @@
           MouseMove="RootGrid_MouseMove"
           PreviewMouseRightButtonUp="RootGrid_PreviewMouseRightButtonUp">
 
-        <Image Source="{Binding CurrentImage}"
-               Stretch="Uniform"
-               RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <TransformGroup>
+        <!-- Pan wrapper: TranslateTransform in screen space -->
+        <Grid IsHitTestVisible="False">
+            <Grid.RenderTransform>
+                <TranslateTransform X="{Binding PanX}" Y="{Binding PanY}"/>
+            </Grid.RenderTransform>
+            <!-- Scale applied around image centre -->
+            <Image Source="{Binding CurrentImage}"
+                   Stretch="Uniform"
+                   RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
                     <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/>
-                    <TranslateTransform X="{Binding PanX}" Y="{Binding PanY}"/>
-                </TransformGroup>
-            </Image.RenderTransform>
-        </Image>
+                </Image.RenderTransform>
+            </Image>
+        </Grid>
 
         <!-- Progress overlay (bottom-left) -->
         <StackPanel VerticalAlignment="Bottom"
