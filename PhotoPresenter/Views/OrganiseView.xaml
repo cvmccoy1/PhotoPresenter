@@ -35,19 +35,17 @@
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Padding" Value="4"/>
-                        <Setter Property="ContextMenu">
-                            <Setter.Value>
-                                <ContextMenu>
-                                    <MenuItem Header="Remove from Presentation"
-                                              Click="FolderRemove_Click"/>
-                                </ContextMenu>
-                            </Setter.Value>
-                        </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
+                            <StackPanel.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Remove from Presentation"
+                                              Click="FolderRemove_Click"/>
+                                </ContextMenu>
+                            </StackPanel.ContextMenu>
                             <Border Width="72" Height="54" Background="#DDD" ClipToBounds="True" Margin="0,0,8,0">
                                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
                             </Border>
@@ -98,19 +96,17 @@
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="4"/>
                         <Setter Property="Margin" Value="2"/>
-                        <Setter Property="ContextMenu">
-                            <Setter.Value>
-                                <ContextMenu>
-                                    <MenuItem Header="Remove from Presentation"
-                                              Click="PhotoRemove_Click"/>
-                                </ContextMenu>
-                            </Setter.Value>
-                        </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Width="154">
+                            <StackPanel.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Remove from Presentation"
+                                              Click="PhotoRemove_Click"/>
+                                </ContextMenu>
+                            </StackPanel.ContextMenu>
                             <Border Width="154" Height="104" Background="#CCC" ClipToBounds="True">
                                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
                             </Border>

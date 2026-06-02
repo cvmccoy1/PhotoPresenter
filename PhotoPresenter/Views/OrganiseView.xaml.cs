@@ -207,8 +207,9 @@ public partial class OrganiseView : UserControl
 
     private static T? ContextMenuTarget<T>(object menuItemSender) where T : class
     {
-        if (menuItemSender is MenuItem { Parent: ContextMenu { PlacementTarget: ListBoxItem { DataContext: T item } } })
-            return item;
+        // ContextMenu is on the DataTemplate's StackPanel, so PlacementTarget is that StackPanel
+        if (menuItemSender is MenuItem { Parent: ContextMenu { PlacementTarget: FrameworkElement fe } })
+            return fe.DataContext as T;
         return null;
     }
 }
