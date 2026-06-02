@@ -1,0 +1,62 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Build & Run
+
+```powershell
+# Build
+dotnet build PhotoPresenter/PhotoPresenter.csproj
+
+# Run (debug)
+dotnet run --project PhotoPresenter/PhotoPresenter.csproj
+
+# Open in Visual Studio 2022
+start PhotoPresenter.sln
+```
+
+The project targets `net8.0-windows` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`.
+
+## Architecture
+
+WPF MVVM app with two modes — **Organise** and **Present** — wired via a DataTemplate dispatch pattern in `App.xaml`. There is no navigation framework; `MainWindow` hosts a single `ContentControl` whose content switches between `OrganiseViewModel` and `PresentViewModel` instances, and WPF automatically applies the matching `DataTemplate` (defined without `x:Key` in `App.xaml.Resources`).
+
+### Layer responsibilities
+
+| Layer | Location | Role |
+|-------|----------|------|
+| Models | `Models/` | Pure data: `PhotoFolder`, `PhotoItem`, JSON sidecar DTOs |
+| Services | `Services/` | `PhotoLibraryService` — scan folders, apply/save sidecar ordering; `UserSettings` — persist last folder to `%APPDATA%\PhotoPresenter\settings.json` |
+| ViewModels | `ViewModels/` | All MVVM state; use `CommunityToolkit.Mvvm` `[ObservableProperty]` / `[RelayCommand]` source generators |
+| Views | `Views/` + `MainWindow.xaml` | XAML layout + code-behind (only D&D event wiring and mouse event forwarding — no business logic) |
+
+### Mode switching
+
+`MainViewModel.CurrentMode` (enum `AppMode`) controls `CurrentView` (computed property). `MainWindow.cs` subscribes to `PropertyChanged` on `MainViewModel` and handles the `WindowStyle`/`WindowState` transition for fullscreen Present mode.
+
+### Sidecar file format
+
+- `_photofolderorder.json` in parent folder — `{ "order": ["FolderName1", "FolderName2", ...] }`
+- `_photoorder.json` in each subfolder — `{ "order": ["img001.jpg", "img002.jpg", ...] }`
+
+Missing entries (renamed/deleted files) are silently skipped; unmentioned items append at the end in alphabetical / creation-date order.
+
+### Key bindings (Present mode)
+
+Handled in `MainWindow.Window_PreviewKeyDown`: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise. Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+
+### Zoom / Pan
+
+`PresentView.xaml` applies a `TransformGroup` (`ScaleTransform` + `TranslateTransform`) with `RenderTransformOrigin="0.5,0.5"` directly bound to `ZoomScale`, `PanX`, `PanY` on `PresentViewModel`. Zoom resets to 1× on every photo navigation.
+
+### Async image loading
+
+`BitmapImage` is always created on a background `Task.Run`, `Freeze()`d, then assigned on the UI thread. Thumbnails use `DecodePixelWidth` (80px for folder cards, 150px for photo tiles). `PresentViewModel` preloads the next photo after each display. A monotonic `_loadSequence` counter guards against stale async results when the user navigates quickly.
+
+### Drag-and-drop
+
+`OrganiseView.xaml.cs` implements WPF D&D for both lists (`PreviewMouseMove` → `DragDrop.DoDragDrop`; `Drop` → `OrganiseViewModel.ReorderFolder/ReorderPhoto`). The sidecar JSON is rewritten immediately after every reorder.
+
+## Global usings
+
+`GlobalUsings.cs` adds `System.IO`, `System.Windows.Media`, and `System.Windows.Media.Imaging` globally (required because the WPF SDK creates a temporary project for compilation that does not inherit all implicit usings).

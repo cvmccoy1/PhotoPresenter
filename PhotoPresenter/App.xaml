@@ -1,0 +1,15 @@
+<Application x:Class="PhotoPresenter.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PhotoPresenter.ViewModels"
+             xmlns:views="clr-namespace:PhotoPresenter.Views"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <DataTemplate DataType="{x:Type vm:OrganiseViewModel}">
+            <views:OrganiseView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PresentViewModel}">
+            <views:PresentView/>
+        </DataTemplate>
+    </Application.Resources>
+</Application>
