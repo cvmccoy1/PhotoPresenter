@@ -33,9 +33,10 @@ public partial class PhotoItemViewModel : ObservableObject
 
     internal static BitmapImage LoadBitmap(string path, int decodeWidth)
     {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var bmp = new BitmapImage();
         bmp.BeginInit();
-        bmp.UriSource = new Uri(path, UriKind.Absolute);
+        bmp.StreamSource = stream;
         bmp.CacheOption = BitmapCacheOption.OnLoad;
         bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
         if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
