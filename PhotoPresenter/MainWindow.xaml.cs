@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using PhotoPresenter.ViewModels;
 
 namespace PhotoPresenter;
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
             MainToolbar.Visibility = Visibility.Collapsed;
             WindowStyle = WindowStyle.None;
             WindowState = WindowState.Maximized;
+            Dispatcher.InvokeAsync(Focus, DispatcherPriority.Input);
         }
         else
         {

@@ -17,20 +17,19 @@ public partial class PresentView : UserControl
         e.Handled = true;
     }
 
-    private void RootGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    private void RootGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         Vm?.BeginPan(e.GetPosition(this));
         RootGrid.CaptureMouse();
-        e.Handled = true;
     }
 
     private void RootGrid_MouseMove(object sender, MouseEventArgs e)
     {
-        if (e.RightButton == MouseButtonState.Pressed)
+        if (e.LeftButton == MouseButtonState.Pressed)
             Vm?.UpdatePan(e.GetPosition(this));
     }
 
-    private void RootGrid_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    private void RootGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         RootGrid.ReleaseMouseCapture();
     }

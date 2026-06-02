@@ -11,9 +11,9 @@
     <Grid x:Name="RootGrid"
           Background="Black"
           PreviewMouseWheel="RootGrid_PreviewMouseWheel"
-          PreviewMouseRightButtonDown="RootGrid_PreviewMouseRightButtonDown"
+          PreviewMouseLeftButtonDown="RootGrid_PreviewMouseLeftButtonDown"
           MouseMove="RootGrid_MouseMove"
-          PreviewMouseRightButtonUp="RootGrid_PreviewMouseRightButtonUp">
+          PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp">
 
         <!-- Pan wrapper: TranslateTransform in screen space -->
         <Grid IsHitTestVisible="False">
@@ -29,6 +29,26 @@
                 </Image.RenderTransform>
             </Image>
         </Grid>
+
+        <!-- Loading indicator (centre) -->
+        <TextBlock Text="Loading…"
+                   Foreground="#888"
+                   FontSize="20"
+                   FontFamily="Segoe UI"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentImage}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
 
         <!-- Progress overlay (bottom-left) -->
         <StackPanel VerticalAlignment="Bottom"
@@ -60,7 +80,7 @@
             <TextBlock Foreground="#888"
                        FontSize="11"
                        FontFamily="Segoe UI">
-                ← → Space · +/- scroll · right-drag pan · Esc
+                ← → Space · +/- scroll · drag pan · Esc
             </TextBlock>
         </Border>
     </Grid>
