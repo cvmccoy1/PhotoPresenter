@@ -15,7 +15,12 @@ public partial class OrganiseViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(Photos))]
     private PhotoFolderViewModel? _selectedFolder;
 
+    [ObservableProperty]
+    private PhotoItemViewModel? _selectedPhoto;
+
     public ObservableCollection<PhotoItemViewModel>? Photos => SelectedFolder?.Photos;
+
+    partial void OnSelectedFolderChanged(PhotoFolderViewModel? value) => SelectedPhoto = null;
 
     public OrganiseViewModel(IPhotoLibraryService library)
     {

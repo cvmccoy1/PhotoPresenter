@@ -30,11 +30,12 @@ public partial class PresentViewModel : ObservableObject
     [ObservableProperty] private string _folderLabel = "";
     [ObservableProperty] private string _photoLabel = "";
 
-    public void SetFolders(List<PhotoFolderViewModel> folders)
+    public void SetFolders(List<PhotoFolderViewModel> folders, int startFolderIndex = 0, int startPhotoIndex = 0)
     {
         _allFolders = folders;
-        _currentFolderIndex = 0;
-        _currentPhotoIndex = 0;
+        _currentFolderIndex = folders.Count > 0 ? Math.Clamp(startFolderIndex, 0, folders.Count - 1) : 0;
+        var photoCount = CurrentPhotos.Count;
+        _currentPhotoIndex = photoCount > 0 ? Math.Clamp(startPhotoIndex, 0, photoCount - 1) : 0;
         _preloadedImage = null;
         _preloadedFolderIndex = -1;
         _preloadedPhotoIndex = -1;

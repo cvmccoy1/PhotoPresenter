@@ -9,7 +9,8 @@
         Title="Photo Presenter"
         Height="768" Width="1200"
         MinHeight="400" MinWidth="600"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closing="Window_Closing">
     <DockPanel>
         <ToolBarTray x:Name="MainToolbar" DockPanel.Dock="Top" IsLocked="True">
             <ToolBar Band="0" BandIndex="0">

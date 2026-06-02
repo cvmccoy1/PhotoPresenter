@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using PhotoPresenter.Services;
 using PhotoPresenter.ViewModels;
 
 namespace PhotoPresenter;
@@ -9,6 +10,8 @@ namespace PhotoPresenter;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private readonly UserSettings _settings;
+    private WindowState _organiseWindowState = WindowState.Normal;
 
     public MainWindow()
     {
@@ -16,6 +19,46 @@ public partial class MainWindow : Window
         _vm = new MainViewModel();
         DataContext = _vm;
         _vm.PropertyChanged += OnVmPropertyChanged;
+
+        _settings = UserSettings.Load();
+        RestoreWindowBounds();
+    }
+
+    private void RestoreWindowBounds()
+    {
+        if (_settings.WindowLeft.HasValue && _settings.WindowTop.HasValue)
+        {
+            Left = _settings.WindowLeft.Value;
+            Top  = _settings.WindowTop.Value;
+        }
+        if (_settings.WindowWidth.HasValue && _settings.WindowHeight.HasValue)
+        {
+            Width  = _settings.WindowWidth.Value;
+            Height = _settings.WindowHeight.Value;
+        }
+        if (_settings.WindowMaximized)
+        {
+            _organiseWindowState = WindowState.Maximized;
+            WindowState = WindowState.Maximized;
+        }
+    }
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        // RestoreBounds gives the Normal-state rect even when maximized/fullscreen
+        var bounds = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, Width, Height)
+            : RestoreBounds;
+
+        if (!bounds.IsEmpty)
+        {
+            _settings.WindowLeft   = bounds.Left;
+            _settings.WindowTop    = bounds.Top;
+            _settings.WindowWidth  = bounds.Width;
+            _settings.WindowHeight = bounds.Height;
+        }
+        _settings.WindowMaximized = _organiseWindowState == WindowState.Maximized;
+        _settings.Save();
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -28,6 +71,7 @@ public partial class MainWindow : Window
     {
         if (mode == AppMode.Present)
         {
+            _organiseWindowState = WindowState;
             MainToolbar.Visibility = Visibility.Collapsed;
             WindowStyle = WindowStyle.None;
             WindowState = WindowState.Maximized;
@@ -36,7 +80,7 @@ public partial class MainWindow : Window
         else
         {
             WindowStyle = WindowStyle.SingleBorderWindow;
-            WindowState = WindowState.Normal;
+            WindowState = _organiseWindowState;
             MainToolbar.Visibility = Visibility.Visible;
         }
     }

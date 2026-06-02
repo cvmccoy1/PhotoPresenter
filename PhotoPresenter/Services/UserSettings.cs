@@ -5,6 +5,11 @@ namespace PhotoPresenter.Services;
 public class UserSettings
 {
     public string LastParentFolder { get; set; } = "";
+    public double? WindowLeft { get; set; }
+    public double? WindowTop { get; set; }
+    public double? WindowWidth { get; set; }
+    public double? WindowHeight { get; set; }
+    public bool WindowMaximized { get; set; }
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

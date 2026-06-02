@@ -53,7 +53,19 @@ public partial class MainViewModel : ObservableObject
     private void SwitchToPresent()
     {
         if (OrganiseVM.Folders.Count == 0) return;
-        PresentVM.SetFolders(OrganiseVM.Folders.ToList());
+
+        var folders = OrganiseVM.Folders.ToList();
+        int startFolder = 0;
+        int startPhoto = 0;
+
+        if (OrganiseVM.SelectedFolder != null)
+        {
+            startFolder = Math.Max(0, folders.IndexOf(OrganiseVM.SelectedFolder));
+            if (OrganiseVM.SelectedPhoto != null)
+                startPhoto = Math.Max(0, OrganiseVM.SelectedFolder.Photos.IndexOf(OrganiseVM.SelectedPhoto));
+        }
+
+        PresentVM.SetFolders(folders, startFolder, startPhoto);
         CurrentMode = AppMode.Present;
     }
 
