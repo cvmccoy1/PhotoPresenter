@@ -96,6 +96,7 @@ public partial class OrganiseViewModel : ObservableObject
         }
 
         SelectedFolder = Folders.Count > 0 ? Folders[0] : null;
+        OnPropertyChanged(nameof(FolderCountLabel));
     }
 
     // ── Folder operations ──────────────────────────────────────────────────────
