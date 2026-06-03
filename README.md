@@ -11,6 +11,9 @@ A Windows WPF application for presenting family photo and video collections on a
 - Video files appear with a play-button thumbnail; the footer shows item counts as **x Items (y Photos, z Videos)**
 - Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
+- Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**
+  - The caption appears in italic below the thumbnail in Organise mode
+  - The caption is overlaid at the bottom of the screen in Present mode
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - Click a folder (and optionally an item) before switching to Present mode to start from that point
 - Window size and position are remembered between sessions
@@ -61,7 +64,10 @@ When you reorder subfolders or photos in Organise mode, the order is saved to si
 - `_photofolderorder.json` in the parent folder — stores folder order and any removed folders
 - `_photoorder.json` in each subfolder — stores photo order and any removed photos
 
-If a sidecar file doesn't exist, folders are shown in alphabetical order and photos in creation-date order. Items not listed in a sidecar (e.g. newly added photos) are appended at the end automatically.
+If a sidecar file doesn't exist, folders are shown in alphabetical order and photos in date order. Items not listed in a sidecar (e.g. newly added photos) are appended at the end automatically.
+
+### Captions
+Captions are stored in each subfolder's `_photoorder.json` sidecar under a `captions` key. They are never written to the image files themselves.
 
 ### Removing and restoring items
 Removing a folder or photo from the presentation adds its name to the `removed` list in the relevant sidecar file. It will be excluded from Organise and Present modes on the next launch. Tick **Show All** to see removed items and restore them individually at any time.
