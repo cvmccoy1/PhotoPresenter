@@ -58,7 +58,9 @@ If a sidecar file doesn't exist, folders are shown in alphabetical order and pho
 Removing a folder or photo from the presentation adds its name to the `removed` list in the relevant sidecar file. It will be excluded from Organise and Present modes on the next launch. Tick **Show All** to see removed items and restore them individually at any time.
 
 ### Supported formats
-JPG, JPEG, PNG, BMP, GIF, TIFF
+JPG, JPEG, PNG, BMP, GIF, TIFF, HEIC, HEIF
+
+HEIC/HEIF requires the free [HEIF Image Extensions](https://apps.microsoft.com/detail/9pmmsr1cgpwg) from the Microsoft Store.
 
 ## Project Structure
 

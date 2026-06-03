@@ -7,7 +7,7 @@ namespace PhotoPresenter.Services;
 public class PhotoLibraryService : IPhotoLibraryService
 {
     private static readonly HashSet<string> PhotoExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif" };
+        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".heic", ".heif" };
 
     private const string FolderOrderFile = "_photofolderorder.json";
     private const string PhotoOrderFile  = "_photoorder.json";

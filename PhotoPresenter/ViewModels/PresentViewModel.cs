@@ -14,7 +14,7 @@ public partial class PresentViewModel : ObservableObject
     private int _loadSequence;
 
     // Preload state
-    private BitmapImage? _preloadedImage;
+    private BitmapSource? _preloadedImage;
     private int _preloadedFolderIndex = -1;
     private int _preloadedPhotoIndex = -1;
 

@@ -34,9 +34,15 @@ public partial class PhotoItemViewModel : ObservableObject
         catch { }
     }
 
-    internal static BitmapImage LoadBitmap(string path, int decodeWidth)
+    internal static BitmapSource LoadBitmap(string path, int decodeWidth)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        var ext = Path.GetExtension(path);
+        if (ext.Equals(".heic", StringComparison.OrdinalIgnoreCase) ||
+            ext.Equals(".heif", StringComparison.OrdinalIgnoreCase))
+            return LoadViaDecoder(stream, decodeWidth);
+
         var bmp = new BitmapImage();
         bmp.BeginInit();
         bmp.StreamSource = stream;
@@ -46,5 +52,25 @@ public partial class PhotoItemViewModel : ObservableObject
         bmp.EndInit();
         bmp.Freeze();
         return bmp;
+    }
+
+    // Used for formats whose WIC codec may not honour DecodePixelWidth (e.g. HEIC).
+    private static BitmapSource LoadViaDecoder(Stream stream, int decodeWidth)
+    {
+        var decoder = BitmapDecoder.Create(stream,
+            BitmapCreateOptions.IgnoreColorProfile,
+            BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+
+        if (decodeWidth > 0 && frame.PixelWidth > decodeWidth)
+        {
+            double scale = (double)decodeWidth / frame.PixelWidth;
+            var scaled = new TransformedBitmap(frame, new ScaleTransform(scale, scale));
+            scaled.Freeze();
+            return scaled;
+        }
+
+        frame.Freeze();
+        return frame;
     }
 }
