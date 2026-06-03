@@ -19,6 +19,7 @@ public partial class OrganiseViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Photos))]
     [NotifyPropertyChangedFor(nameof(CurrentPhotoItems))]
+    [NotifyPropertyChangedFor(nameof(PhotoCountLabel))]
     private PhotoFolderViewModel? _selectedFolder;
 
     [ObservableProperty]
@@ -30,6 +31,7 @@ public partial class OrganiseViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentPhotoItems))]
+    [NotifyPropertyChangedFor(nameof(PhotoCountLabel))]
     private bool _showAllPhotos;
 
     // Switches between active-only Folders and all-items list.
@@ -42,6 +44,19 @@ public partial class OrganiseViewModel : ObservableObject
     // Switches between active-only and all-items photo list for the selected folder.
     public ObservableCollection<PhotoItemViewModel>? CurrentPhotoItems =>
         ShowAllPhotos ? SelectedFolder?.AllPhotoItems : SelectedFolder?.Photos;
+
+    public string PhotoCountLabel
+    {
+        get
+        {
+            if (SelectedFolder == null) return "";
+            int active  = SelectedFolder.Photos.Count;
+            int removed = SelectedFolder.AllPhotoItems.Count - active;
+            if (ShowAllPhotos && removed > 0)
+                return $"{active + removed} photos  ({removed} removed)";
+            return $"{active} photo{(active == 1 ? "" : "s")}";
+        }
+    }
 
     public OrganiseViewModel(IPhotoLibraryService library)
     {
@@ -122,6 +137,7 @@ public partial class OrganiseViewModel : ObservableObject
         folder.Photos.Remove(photo);
         folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.AllPhotoItems.Count - 1);
         SaveAllPhotoOrder(folder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
     }
 
     public void RestorePhoto(PhotoItemViewModel photo)
@@ -132,6 +148,7 @@ public partial class OrganiseViewModel : ObservableObject
         folder.Photos.Add(photo);
         folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.Photos.Count - 1);
         SaveAllPhotoOrder(folder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
     }
 
     // ── Persistence ────────────────────────────────────────────────────────────

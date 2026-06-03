@@ -120,6 +120,10 @@
                     </TextBlock>
                 </DockPanel>
             </Border>
+            <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
+                <TextBlock Text="{Binding PhotoCountLabel}"
+                           FontSize="11" Foreground="#555"/>
+            </Border>
             <ListBox x:Name="PhotoList"
                      ItemsSource="{Binding CurrentPhotoItems}"
                      SelectedItem="{Binding SelectedPhoto}"
