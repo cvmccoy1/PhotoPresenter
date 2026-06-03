@@ -36,8 +36,9 @@ public partial class PhotoFolderViewModel : ObservableObject
                 Photos.Add(vm);
         }
 
-        // Thumbnail from first active photo; fall back to any photo.
-        var thumbPath = model.Photos.FirstOrDefault(p => !p.IsRemoved)?.FullPath
+        // Thumbnail from first active non-video photo; fall back to any active or any photo.
+        var thumbPath = model.Photos.FirstOrDefault(p => !p.IsRemoved && !p.IsVideo)?.FullPath
+                     ?? model.Photos.FirstOrDefault(p => !p.IsRemoved)?.FullPath
                      ?? model.Photos.FirstOrDefault()?.FullPath;
         if (thumbPath != null)
             _ = LoadThumbnailAsync(thumbPath);
@@ -48,8 +49,16 @@ public partial class PhotoFolderViewModel : ObservableObject
         if (!File.Exists(path)) return;
         try
         {
-            var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 80));
-            Thumbnail = bmp;
+            await PhotoItemViewModel.ThumbSemaphore.WaitAsync();
+            try
+            {
+                var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 80));
+                Thumbnail = bmp;
+            }
+            finally
+            {
+                PhotoItemViewModel.ThumbSemaphore.Release();
+            }
         }
         catch { }
     }

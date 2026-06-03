@@ -192,7 +192,23 @@
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
                             <Border Width="154" Height="104" Background="#CCC" ClipToBounds="True">
-                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                <Grid>
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                    <Grid Background="#1A1A1A">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsVideo}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <TextBlock Text="▶" FontSize="40" Foreground="#666"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Grid>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
                                        TextTrimming="CharacterEllipsis"

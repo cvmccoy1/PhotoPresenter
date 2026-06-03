@@ -97,8 +97,14 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Right:
-            case Key.Space:
                 pvm.NextPhoto();
+                e.Handled = true;
+                break;
+            case Key.Space:
+                if (pvm.CurrentIsVideo)
+                    pvm.IsPlaying = !pvm.IsPlaying;
+                else
+                    pvm.NextPhoto();
                 e.Handled = true;
                 break;
             case Key.Left:

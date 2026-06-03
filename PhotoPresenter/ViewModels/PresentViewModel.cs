@@ -30,6 +30,19 @@ public partial class PresentViewModel : ObservableObject
     [ObservableProperty] private string _folderLabel = "";
     [ObservableProperty] private string _photoLabel = "";
 
+    // Video state
+    [ObservableProperty] private bool _currentIsVideo;
+    [ObservableProperty] private string _currentVideoPath = "";
+    [ObservableProperty] private bool _isPlaying;
+    [ObservableProperty] private double _volume = 0.5;
+    [ObservableProperty] private string _positionLabel = "";
+    [ObservableProperty] private string _playPauseIcon = "▶";
+    [ObservableProperty] private double _videoRotation;
+
+    partial void OnIsPlayingChanged(bool value) => PlayPauseIcon = value ? "⏸" : "▶";
+
+    public void RotateVideo() => VideoRotation = (VideoRotation + 90) % 360;
+
     public void SetFolders(List<PhotoFolderViewModel> folders, int startFolderIndex = 0, int startPhotoIndex = 0)
     {
         _allFolders = folders;
@@ -39,6 +52,11 @@ public partial class PresentViewModel : ObservableObject
         _preloadedImage = null;
         _preloadedFolderIndex = -1;
         _preloadedPhotoIndex = -1;
+        CurrentIsVideo = false;
+        CurrentVideoPath = "";
+        IsPlaying = false;
+        PositionLabel = "";
+        VideoRotation = 0;
         ResetZoomPan();
         UpdateLabels();
         if (_allFolders.Count > 0 && CurrentPhotos.Count > 0)
@@ -88,6 +106,16 @@ public partial class PresentViewModel : ObservableObject
         PanY = _panStartY + (screenPoint.Y - _panStart.Y);
     }
 
+    public void UpdatePosition(TimeSpan position, TimeSpan duration)
+    {
+        PositionLabel = $"{FormatTime(position)} / {FormatTime(duration)}";
+    }
+
+    private static string FormatTime(TimeSpan ts) =>
+        ts.TotalHours >= 1
+            ? $"{(int)ts.TotalHours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
+
     private ObservableCollection<PhotoItemViewModel> CurrentPhotos =>
         _allFolders.Count > 0 ? _allFolders[_currentFolderIndex].Photos : new();
 
@@ -102,7 +130,7 @@ public partial class PresentViewModel : ObservableObject
     {
         if (_allFolders.Count == 0) return;
         FolderLabel = $"{_allFolders[_currentFolderIndex].Name}  ({_currentFolderIndex + 1} of {_allFolders.Count})";
-        PhotoLabel = $"Photo {_currentPhotoIndex + 1} of {CurrentPhotos.Count}";
+        PhotoLabel = $"Item {_currentPhotoIndex + 1} of {CurrentPhotos.Count}";
     }
 
     private async Task LoadCurrentPhotoAsync()
@@ -112,6 +140,24 @@ public partial class PresentViewModel : ObservableObject
         if (photos.Count == 0) return;
 
         var photo = photos[_currentPhotoIndex];
+
+        if (photo.IsVideo)
+        {
+            if (seq != _loadSequence) return;
+            CurrentImage = null;
+            CurrentIsVideo = true;
+            IsPlaying = false;
+            PositionLabel = "";
+            VideoRotation = 0;
+            CurrentVideoPath = photo.FullPath;
+            UpdateLabels();
+            return;
+        }
+
+        // Photo path — clear any previous video state first
+        CurrentIsVideo = false;
+        CurrentVideoPath = "";
+        IsPlaying = false;
 
         // Use preloaded bitmap if it matches
         if (_preloadedFolderIndex == _currentFolderIndex &&
@@ -160,10 +206,13 @@ public partial class PresentViewModel : ObservableObject
             nextPhoto = 0;
         }
 
-        // Only one photo total — nothing to preload
+        // Only one item total — nothing to preload
         if (nextFolder == _currentFolderIndex && nextPhoto == _currentPhotoIndex) return;
 
-        var path = _allFolders[nextFolder].Photos[nextPhoto].FullPath;
+        var nextItem = _allFolders[nextFolder].Photos[nextPhoto];
+        if (nextItem.IsVideo) return; // no preload for video
+
+        var path = nextItem.FullPath;
         try
         {
             var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 0));

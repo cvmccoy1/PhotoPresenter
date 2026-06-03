@@ -7,9 +7,13 @@ namespace PhotoPresenter.ViewModels;
 
 public partial class PhotoItemViewModel : ObservableObject
 {
+    // Limits concurrent thumbnail decodes so Present mode can always get a thread pool thread.
+    internal static readonly SemaphoreSlim ThumbSemaphore = new(6, 6);
+
     public PhotoItem Model { get; }
     public string FileName => Model.FileName;
     public string FullPath => Model.FullPath;
+    public bool IsVideo => Model.IsVideo;
 
     [ObservableProperty] private ImageSource? _thumbnail;
     [ObservableProperty] private bool _isRemoved;
@@ -25,11 +29,19 @@ public partial class PhotoItemViewModel : ObservableObject
 
     private async Task LoadThumbnailAsync()
     {
-        if (!File.Exists(Model.FullPath)) return;
+        if (Model.IsVideo || !File.Exists(Model.FullPath)) return;
         try
         {
-            var bmp = await Task.Run(() => LoadBitmap(Model.FullPath, 150));
-            Thumbnail = bmp;
+            await ThumbSemaphore.WaitAsync();
+            try
+            {
+                var bmp = await Task.Run(() => LoadBitmap(Model.FullPath, 150));
+                Thumbnail = bmp;
+            }
+            finally
+            {
+                ThumbSemaphore.Release();
+            }
         }
         catch { }
     }

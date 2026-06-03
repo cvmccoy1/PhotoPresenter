@@ -6,4 +6,5 @@ public class PhotoItem
     public string FullPath { get; set; } = "";
     public DateTime CreationDate { get; set; }
     public bool IsRemoved { get; set; }
+    public bool IsVideo { get; set; }
 }

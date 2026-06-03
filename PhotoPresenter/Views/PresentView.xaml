@@ -8,6 +8,35 @@
              d:DataContext="{d:DesignInstance Type=vm:PresentViewModel}"
              Background="Black"
              Focusable="False">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="VideoButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#44FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid x:Name="RootGrid"
           Background="Black"
           PreviewMouseWheel="RootGrid_PreviewMouseWheel"
@@ -15,12 +44,20 @@
           MouseMove="RootGrid_MouseMove"
           PreviewMouseLeftButtonUp="RootGrid_PreviewMouseLeftButtonUp">
 
-        <!-- Pan wrapper: TranslateTransform in screen space -->
+        <!-- Pan wrapper: TranslateTransform in screen space (hidden for video) -->
         <Grid IsHitTestVisible="False">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Grid.RenderTransform>
                 <TranslateTransform X="{Binding PanX}" Y="{Binding PanY}"/>
             </Grid.RenderTransform>
-            <!-- Scale applied around image centre -->
             <Image Source="{Binding CurrentImage}"
                    Stretch="Uniform"
                    RenderTransformOrigin="0.5,0.5">
@@ -30,7 +67,32 @@
             </Image>
         </Grid>
 
-        <!-- Loading indicator (centre) -->
+        <!-- Video player with rotation (visible when CurrentIsVideo) -->
+        <MediaElement x:Name="VideoPlayer"
+                      Stretch="Uniform"
+                      LoadedBehavior="Manual"
+                      UnloadedBehavior="Stop"
+                      Volume="{Binding Volume}"
+                      RenderTransformOrigin="0.5,0.5"
+                      MediaOpened="VideoPlayer_MediaOpened"
+                      MediaEnded="VideoPlayer_MediaEnded"
+                      MediaFailed="VideoPlayer_MediaFailed">
+            <MediaElement.RenderTransform>
+                <RotateTransform Angle="{Binding VideoRotation}"/>
+            </MediaElement.RenderTransform>
+            <MediaElement.Style>
+                <Style TargetType="MediaElement">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </MediaElement.Style>
+        </MediaElement>
+
+        <!-- Loading indicator (hidden when CurrentIsVideo or image loaded) -->
         <TextBlock Text="Loading…"
                    Foreground="#888"
                    FontSize="20"
@@ -45,31 +107,39 @@
                         <DataTrigger Binding="{Binding CurrentImage}" Value="{x:Null}">
                             <Setter Property="Visibility" Value="Visible"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </TextBlock.Style>
         </TextBlock>
 
-        <!-- Progress overlay (bottom-left) -->
+        <!-- Progress overlay (bottom-left, hidden for video) -->
         <StackPanel VerticalAlignment="Bottom"
                     HorizontalAlignment="Left"
                     Margin="16,0,0,16"
                     IsHitTestVisible="False">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
             <Border Background="#99000000" CornerRadius="3" Padding="8,4" Margin="0,2">
                 <TextBlock Text="{Binding FolderLabel}"
-                           Foreground="White"
-                           FontSize="14"
-                           FontFamily="Segoe UI"/>
+                           Foreground="White" FontSize="14" FontFamily="Segoe UI"/>
             </Border>
             <Border Background="#99000000" CornerRadius="3" Padding="8,4" Margin="0,2">
                 <TextBlock Text="{Binding PhotoLabel}"
-                           Foreground="#CCC"
-                           FontSize="12"
-                           FontFamily="Segoe UI"/>
+                           Foreground="#CCC" FontSize="12" FontFamily="Segoe UI"/>
             </Border>
         </StackPanel>
 
-        <!-- Key hint (bottom-right) -->
+        <!-- Key hint (bottom-right, hidden for video) -->
         <Border VerticalAlignment="Bottom"
                 HorizontalAlignment="Right"
                 Background="#66000000"
@@ -77,11 +147,78 @@
                 Padding="8,4"
                 Margin="0,0,16,16"
                 IsHitTestVisible="False">
-            <TextBlock Foreground="#888"
-                       FontSize="11"
-                       FontFamily="Segoe UI">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Foreground="#888" FontSize="11" FontFamily="Segoe UI">
                 ← → Space · +/- scroll · drag pan · Esc
             </TextBlock>
         </Border>
+
+        <!-- Video controls bar (bottom, visible when CurrentIsVideo) -->
+        <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="12,8">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentIsVideo}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 0: Scrub slider -->
+                <Slider x:Name="ScrubSlider"
+                        Grid.Row="0"
+                        Minimum="0" Maximum="100" Value="0"
+                        SmallChange="1" LargeChange="10"
+                        Margin="0,0,0,6"/>
+
+                <!-- Row 1: Controls -->
+                <DockPanel Grid.Row="1">
+                    <!-- Volume (right) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Vol" Foreground="#AAA" FontSize="11" FontFamily="Segoe UI"
+                                   VerticalAlignment="Center" Margin="8,0,6,0"/>
+                        <Slider Width="100" Minimum="0" Maximum="1" VerticalAlignment="Center"
+                                Value="{Binding Volume, Mode=TwoWay}"/>
+                    </StackPanel>
+                    <!-- Left: folder/item label, playback controls, position, rotate -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#55000000" CornerRadius="3" Padding="8,3" Margin="0,0,10,0">
+                            <StackPanel>
+                                <TextBlock Text="{Binding FolderLabel}" Foreground="White"
+                                           FontSize="13" FontFamily="Segoe UI"/>
+                                <TextBlock Text="{Binding PhotoLabel}" Foreground="#CCC"
+                                           FontSize="11" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+                        <Button Content="↺" Style="{StaticResource VideoButtonStyle}"
+                                Click="RestartVideo_Click" ToolTip="Restart" Margin="0,0,2,0"/>
+                        <Button Content="{Binding PlayPauseIcon}" Style="{StaticResource VideoButtonStyle}"
+                                Click="PlayPause_Click" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding PositionLabel}"
+                                   Foreground="White" FontSize="14" FontFamily="Segoe UI Mono"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button Content="↻ 90°" Style="{StaticResource VideoButtonStyle}"
+                                Click="RotateVideo_Click" ToolTip="Rotate 90°"
+                                FontSize="13" Padding="8,4"/>
+                    </StackPanel>
+                </DockPanel>
+            </Grid>
+        </Border>
+
     </Grid>
 </UserControl>

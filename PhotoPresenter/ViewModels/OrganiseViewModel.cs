@@ -63,11 +63,22 @@ public partial class OrganiseViewModel : ObservableObject
         get
         {
             if (SelectedFolder == null) return "";
-            int active  = SelectedFolder.Photos.Count;
-            int removed = SelectedFolder.AllPhotoItems.Count - active;
+            int photoCount = SelectedFolder.Photos.Count(p => !p.IsVideo);
+            int videoCount = SelectedFolder.Photos.Count(p =>  p.IsVideo);
+            int total      = photoCount + videoCount;
+            int removed    = SelectedFolder.AllPhotoItems.Count - total;
+
+            string baseLabel;
+            if (photoCount > 0 && videoCount > 0)
+                baseLabel = $"{total} Items ({photoCount} Photo{(photoCount == 1 ? "" : "s")}, {videoCount} Video{(videoCount == 1 ? "" : "s")})";
+            else if (videoCount > 0)
+                baseLabel = $"{videoCount} Video{(videoCount == 1 ? "" : "s")}";
+            else
+                baseLabel = $"{photoCount} Photo{(photoCount == 1 ? "" : "s")}";
+
             if (ShowAllPhotos && removed > 0)
-                return $"{active + removed} photos  ({removed} removed)";
-            return $"{active} photo{(active == 1 ? "" : "s")}";
+                return $"{baseLabel}  ({removed} removed)";
+            return baseLabel;
         }
     }
 

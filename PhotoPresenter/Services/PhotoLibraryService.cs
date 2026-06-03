@@ -9,6 +9,12 @@ public class PhotoLibraryService : IPhotoLibraryService
     private static readonly HashSet<string> PhotoExtensions =
         new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".heic", ".heif" };
 
+    private static readonly HashSet<string> VideoExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".mov", ".mp4", ".avi", ".wmv", ".m4v", ".mkv" };
+
+    private static readonly HashSet<string> MediaExtensions =
+        new(PhotoExtensions.Concat(VideoExtensions), StringComparer.OrdinalIgnoreCase);
+
     private const string FolderOrderFile = "_photofolderorder.json";
     private const string PhotoOrderFile  = "_photoorder.json";
 
@@ -94,7 +100,7 @@ public class PhotoLibraryService : IPhotoLibraryService
     private static List<PhotoItem> LoadPhotosForFolder(string folderPath)
     {
         var files = Directory.GetFiles(folderPath)
-            .Where(f => PhotoExtensions.Contains(Path.GetExtension(f)))
+            .Where(f => MediaExtensions.Contains(Path.GetExtension(f)))
             .Select(f => new FileInfo(f))
             .ToList();
 
@@ -133,7 +139,8 @@ public class PhotoLibraryService : IPhotoLibraryService
                         FileName     = file.Name,
                         FullPath     = file.FullName,
                         CreationDate = file.CreationTime,
-                        IsRemoved    = true
+                        IsRemoved    = true,
+                        IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name))
                     });
 
             return result;
@@ -148,7 +155,8 @@ public class PhotoLibraryService : IPhotoLibraryService
     {
         FileName     = file.Name,
         FullPath     = file.FullName,
-        CreationDate = file.CreationTime
+        CreationDate = file.CreationTime,
+        IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name))
     };
 
     // folders must be ordered: active first, then removed (IsRemoved=true).
