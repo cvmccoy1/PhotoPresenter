@@ -1,0 +1,27 @@
+<Window x:Class="PhotoPresenter.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Photo Presenter"
+        Width="340" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <StackPanel Margin="28,24,28,24" >
+        <Image Source="/app.ico" Width="48" Height="48" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+        <TextBlock Text="Photo Presenter"
+                   FontSize="20" FontWeight="SemiBold"
+                   Margin="0,0,0,4"/>
+        <TextBlock x:Name="VersionText"
+                   FontSize="13" Foreground="#555"
+                   Margin="0,0,0,12"/>
+        <TextBlock Text="A simple fullscreen photo presenter for family photo libraries."
+                   FontSize="12" Foreground="#444"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,16"/>
+        <TextBlock x:Name="CopyrightText"
+                   FontSize="11" Foreground="#888"
+                   Margin="0,0,0,20"/>
+        <Button Content="OK" Width="80" HorizontalAlignment="Right"
+                IsDefault="True" Click="OK_Click" Padding="0,4"/>
+    </StackPanel>
+</Window>

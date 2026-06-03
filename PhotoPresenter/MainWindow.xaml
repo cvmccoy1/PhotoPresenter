@@ -30,6 +30,10 @@
                         Command="{Binding SwitchToPresentCommand}"
                         Padding="8,3" Margin="2"
                         FontWeight="SemiBold"/>
+                <Separator/>
+                <Button Content="About"
+                        Click="About_Click"
+                        Padding="6,3" Margin="2"/>
             </ToolBar>
         </ToolBarTray>
 

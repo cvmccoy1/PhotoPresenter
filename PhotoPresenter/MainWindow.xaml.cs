@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using PhotoPresenter.Services;
 using PhotoPresenter.ViewModels;
+using PhotoPresenter.Views;
 
 namespace PhotoPresenter;
 
@@ -84,6 +85,9 @@ public partial class MainWindow : Window
             MainToolbar.Visibility = Visibility.Visible;
         }
     }
+
+    private void About_Click(object sender, RoutedEventArgs e) =>
+        new AboutWindow { Owner = this }.ShowDialog();
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
