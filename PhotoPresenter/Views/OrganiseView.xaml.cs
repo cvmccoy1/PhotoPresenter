@@ -40,7 +40,14 @@ public partial class OrganiseView : UserControl
 
         var item = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
         if (item != null)
+        {
+            FolderList.QueryContinueDrag += CancelDragOnEscape;
             DragDrop.DoDragDrop(FolderList, item, DragDropEffects.Move);
+            FolderList.QueryContinueDrag -= CancelDragOnEscape;
+            RemoveAdorner();
+            // Reset start point so a still-held button doesn't immediately re-trigger a drag.
+            _dragStartPoint = Mouse.GetPosition(null);
+        }
     }
 
     private void FolderList_DragOver(object sender, DragEventArgs e)
@@ -58,7 +65,7 @@ public partial class OrganiseView : UserControl
         {
             var pos = e.GetPosition(container);
             bool insertBefore = pos.Y < container.ActualHeight / 2;
-            SetFolderAdorner(container, insertBefore);
+            SetAdorner(container, insertBefore, vertical: false);
         }
         e.Handled = true;
     }
@@ -71,10 +78,15 @@ public partial class OrganiseView : UserControl
         if (!e.Data.GetDataPresent(typeof(PhotoFolderViewModel))) return;
         var dragging = (PhotoFolderViewModel)e.Data.GetData(typeof(PhotoFolderViewModel));
 
-        int to = GetDropIndex(FolderList, e.GetPosition(FolderList));
         int from = Vm?.Folders.IndexOf(dragging) ?? -1;
-        if (from >= 0 && to >= 0 && from != to)
-            Vm!.ReorderFolder(from, to);
+        if (from < 0 || Vm == null) return;
+
+        // GetDropSlot returns an insertion slot (0..Count). Convert to a Move index:
+        // moving down shifts earlier indices after removal, so subtract 1 when slot > from.
+        int slot = GetDropSlot(FolderList, e.GetPosition(FolderList));
+        int to   = slot > from ? slot - 1 : slot;
+        if (from != to)
+            Vm.ReorderFolder(from, to);
     }
 
     private void FolderRemove_Click(object sender, RoutedEventArgs e)
@@ -113,7 +125,13 @@ public partial class OrganiseView : UserControl
 
         var item = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
         if (item != null)
+        {
+            PhotoList.QueryContinueDrag += CancelDragOnEscape;
             DragDrop.DoDragDrop(PhotoList, item, DragDropEffects.Move);
+            PhotoList.QueryContinueDrag -= CancelDragOnEscape;
+            RemoveAdorner();
+            _dragStartPoint = Mouse.GetPosition(null);
+        }
     }
 
     private void PhotoList_DragOver(object sender, DragEventArgs e)
@@ -126,11 +144,13 @@ public partial class OrganiseView : UserControl
         }
         e.Effects = DragDropEffects.Move;
 
-        // For the wrap-panel list highlight the target item with a left-edge adorner
         var container = HitTestContainer(PhotoList, e.GetPosition(PhotoList));
         if (container != null)
-            SetFolderAdorner(container, insertBefore: true);
-
+        {
+            var pos = e.GetPosition(container);
+            bool insertBefore = pos.X < container.ActualWidth / 2;
+            SetAdorner(container, insertBefore, vertical: true);
+        }
         e.Handled = true;
     }
 
@@ -142,13 +162,21 @@ public partial class OrganiseView : UserControl
         if (!e.Data.GetDataPresent(typeof(PhotoItemViewModel))) return;
         var dragging = (PhotoItemViewModel)e.Data.GetData(typeof(PhotoItemViewModel));
         var target = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
-        if (target == null || ReferenceEquals(dragging, target) || Vm == null) return;
+        if (target == null || Vm == null) return;
 
         var photos = Vm.Photos;
         if (photos == null) return;
         int from = photos.IndexOf(dragging);
-        int to   = photos.IndexOf(target);
-        if (from >= 0 && to >= 0)
+        int targetIndex = photos.IndexOf(target);
+        if (from < 0 || targetIndex < 0) return;
+
+        // Left half of target = insert before it; right half = insert after it.
+        var container = PhotoList.ItemContainerGenerator.ContainerFromIndex(targetIndex) as ListBoxItem;
+        bool insertBefore = container == null || e.GetPosition(container).X < container.ActualWidth / 2;
+        int slot = insertBefore ? targetIndex : targetIndex + 1;
+
+        int to = slot > from ? slot - 1 : slot;
+        if (from != to)
             Vm.ReorderPhoto(from, to);
     }
 
@@ -204,13 +232,15 @@ public partial class OrganiseView : UserControl
 
     // ── Insertion adorner ──────────────────────────────────────────────────────
 
-    private void SetFolderAdorner(ListBoxItem container, bool insertBefore)
+    private void SetAdorner(ListBoxItem container, bool insertBefore, bool vertical = false)
     {
-        if (_adorner?.AdornedElement == container && _adorner.InsertBefore == insertBefore) return;
+        if (_adorner?.AdornedElement == container &&
+            _adorner.InsertBefore == insertBefore &&
+            _adorner.Vertical == vertical) return;
         RemoveAdorner();
         var layer = AdornerLayer.GetAdornerLayer(container);
         if (layer == null) return;
-        _adorner = new InsertionAdorner(container, insertBefore);
+        _adorner = new InsertionAdorner(container, insertBefore, vertical);
         layer.Add(_adorner);
     }
 
@@ -244,7 +274,8 @@ public partial class OrganiseView : UserControl
         return null;
     }
 
-    private static int GetDropIndex(ListBox listBox, Point position)
+    // Returns insertion slot 0..Count: the index before which the dragged item should appear.
+    private static int GetDropSlot(ListBox listBox, Point position)
     {
         for (int i = 0; i < listBox.Items.Count; i++)
         {
@@ -254,7 +285,17 @@ public partial class OrganiseView : UserControl
             if (position.Y < topLeft.Y + container.ActualHeight / 2)
                 return i;
         }
-        return Math.Max(0, listBox.Items.Count - 1);
+        return listBox.Items.Count; // after last item
+    }
+
+    private void CancelDragOnEscape(object sender, QueryContinueDragEventArgs e)
+    {
+        if (e.EscapePressed)
+        {
+            e.Action  = DragAction.Cancel;
+            e.Handled = true;
+            RemoveAdorner();
+        }
     }
 
     private static T? ContextMenuTarget<T>(object menuItemSender) where T : class
