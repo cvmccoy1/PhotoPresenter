@@ -27,6 +27,7 @@ public partial class OrganiseViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentFolderItems))]
+    [NotifyPropertyChangedFor(nameof(FolderCountLabel))]
     private bool _showAllFolders;
 
     [ObservableProperty]
@@ -37,6 +38,18 @@ public partial class OrganiseViewModel : ObservableObject
     // Switches between active-only Folders and all-items list.
     public ObservableCollection<PhotoFolderViewModel> CurrentFolderItems =>
         ShowAllFolders ? _allFolderItems : Folders;
+
+    public string FolderCountLabel
+    {
+        get
+        {
+            int active  = Folders.Count;
+            int removed = _allFolderItems.Count - active;
+            if (ShowAllFolders && removed > 0)
+                return $"{active + removed} folders  ({removed} removed)";
+            return $"{active} folder{(active == 1 ? "" : "s")}";
+        }
+    }
 
     // Kept for backward compat (PresentViewModel reads SelectedFolder.Photos directly).
     public ObservableCollection<PhotoItemViewModel>? Photos => SelectedFolder?.Photos;
@@ -102,18 +115,18 @@ public partial class OrganiseViewModel : ObservableObject
         Folders.Remove(folder);
         if (SelectedFolder == folder)
             SelectedFolder = Folders.FirstOrDefault();
-        // Move to end of _allFolderItems (the removed section).
         _allFolderItems.Move(_allFolderItems.IndexOf(folder), _allFolderItems.Count - 1);
         SaveAllFolderOrder();
+        OnPropertyChanged(nameof(FolderCountLabel));
     }
 
     public void RestoreFolder(PhotoFolderViewModel folder)
     {
         folder.IsRemoved = false;
         Folders.Add(folder);
-        // Move in _allFolderItems to the last active slot.
         _allFolderItems.Move(_allFolderItems.IndexOf(folder), Folders.Count - 1);
         SaveAllFolderOrder();
+        OnPropertyChanged(nameof(FolderCountLabel));
     }
 
     // ── Photo operations ───────────────────────────────────────────────────────

@@ -27,6 +27,10 @@
                                Foreground="#555" VerticalAlignment="Center"/>
                 </DockPanel>
             </Border>
+            <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
+                <TextBlock Text="{Binding FolderCountLabel}"
+                           FontSize="11" Foreground="#555"/>
+            </Border>
             <ListBox x:Name="FolderList"
                      ItemsSource="{Binding CurrentFolderItems}"
                      SelectedItem="{Binding SelectedFolder}"
