@@ -1,32 +1,41 @@
 # PhotoPresenter
 
-A Windows WPF application for presenting family photo collections on a TV. Browse and organise your photos in one mode, then present them fullscreen in another.
+A Windows WPF application for presenting family photo and video collections on a TV. Browse and organise your media in one mode, then present it fullscreen in another.
 
 ## Features
 
 ### Organise Mode
-- Browse a parent folder containing subfolders of photos
+- Browse a parent folder containing subfolders of photos and videos
 - Drag and drop subfolders to set a custom presentation order
-- Select a subfolder and drag and drop its photos to reorder them
-- Right-click a folder or photo and choose **Remove from Presentation** to exclude it — the actual files are never touched
+- Select a subfolder and drag and drop its items to reorder them
+- Video files appear with a play-button thumbnail; the footer shows item counts as **x Items (y Photos, z Videos)**
+- Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
-- Click a folder (and optionally a photo) before switching to Present mode to start the slideshow from that point
+- Click a folder (and optionally an item) before switching to Present mode to start from that point
 - Window size and position are remembered between sessions
 
 ### Present Mode
 - Fullscreen display on your TV or monitor
-- Starts at the folder and photo selected in Organise mode
-- Clean black background, photo fills the screen — no transitions, no effects
+- Starts at the folder and item selected in Organise mode
+- Clean black background, media fills the screen — no transitions, no effects
 - Keyboard navigation:
-  - **Right Arrow** or **Space** — next photo
-  - **Left Arrow** — previous photo
+  - **Right Arrow** — next item
+  - **Space** — next photo; toggle play/pause for video
+  - **Left Arrow** — previous item
   - Automatically moves between subfolders at boundaries
-- Zoom and pan:
+- Photo zoom and pan:
   - **+** / **-** — zoom in / out
   - **Scroll wheel** — zoom in / out
   - **Click and drag** — pan a zoomed image
   - **Escape** — return to Organise mode
+- Video playback controls (shown at the bottom of the screen):
+  - Scrub slider — drag to seek anywhere in the video
+  - **↺** — restart from the beginning
+  - **▶ / ⏸** — play / pause
+  - Position display — current time and total duration (e.g. 0:23 / 3:16)
+  - **↻ 90°** — rotate the video 90° clockwise (resets for each new video)
+  - Volume slider
 
 ## Requirements
 
@@ -58,9 +67,13 @@ If a sidecar file doesn't exist, folders are shown in alphabetical order and pho
 Removing a folder or photo from the presentation adds its name to the `removed` list in the relevant sidecar file. It will be excluded from Organise and Present modes on the next launch. Tick **Show All** to see removed items and restore them individually at any time.
 
 ### Supported formats
-JPG, JPEG, PNG, BMP, GIF, TIFF, HEIC, HEIF
+**Photos:** JPG, JPEG, PNG, BMP, GIF, TIFF, HEIC, HEIF
 
 HEIC/HEIF requires the free [HEIF Image Extensions](https://apps.microsoft.com/detail/9pmmsr1cgpwg) from the Microsoft Store.
+
+**Videos:** MOV, MP4, AVI, WMV, M4V, MKV
+
+Video playback uses the Windows media infrastructure. Most common formats work out of the box on Windows 10/11; some codecs (e.g. HEVC/H.265) may require the free [HEVC Video Extensions](https://apps.microsoft.com/detail/9nmzlz57r3t7) from the Microsoft Store.
 
 ## Project Structure
 
