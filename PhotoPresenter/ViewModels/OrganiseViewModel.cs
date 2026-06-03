@@ -176,6 +176,37 @@ public partial class OrganiseViewModel : ObservableObject
         OnPropertyChanged(nameof(PhotoCountLabel));
     }
 
+    public async Task SortPhotosByDateAsync()
+    {
+        if (SelectedFolder == null) return;
+        var folder = SelectedFolder;
+        var prevSelected = SelectedPhoto;
+
+        var activeSnapshot  = folder.Photos.ToList();
+        var removedSnapshot = folder.AllPhotoItems.Where(p => p.IsRemoved).ToList();
+
+        var (sortedActive, sortedRemoved) = await Task.Run(() =>
+        {
+            var a = activeSnapshot .OrderBy(p => _library.GetEffectiveDateWithExif(p.Model)).ToList();
+            var r = removedSnapshot.OrderBy(p => _library.GetEffectiveDateWithExif(p.Model)).ToList();
+            return (a, r);
+        });
+
+        folder.Photos.Clear();
+        foreach (var p in sortedActive)  folder.Photos.Add(p);
+
+        folder.AllPhotoItems.Clear();
+        foreach (var p in sortedActive)  folder.AllPhotoItems.Add(p);
+        foreach (var p in sortedRemoved) folder.AllPhotoItems.Add(p);
+
+        SaveAllPhotoOrder(folder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
+
+        SelectedPhoto = (prevSelected != null && folder.Photos.Contains(prevSelected))
+            ? prevSelected
+            : folder.Photos.FirstOrDefault();
+    }
+
     // ── Persistence ────────────────────────────────────────────────────────────
 
     private void SaveAllFolderOrder() =>

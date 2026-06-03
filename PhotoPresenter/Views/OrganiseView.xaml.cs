@@ -152,6 +152,19 @@ public partial class OrganiseView : UserControl
             Vm.ReorderPhoto(from, to);
     }
 
+    private async void SortByDate_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.SelectedFolder == null) return;
+        var result = MessageBox.Show(
+            Window.GetWindow(this),
+            $"Reorder all items in \"{Vm.SelectedFolder.Name}\" by date (oldest first)?\n\nThe saved order will be updated.",
+            "Sort by Date",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question);
+        if (result == MessageBoxResult.OK)
+            await Vm.SortPhotosByDateAsync();
+    }
+
     private void PhotoRemove_Click(object sender, RoutedEventArgs e)
     {
         var photo = ContextMenuTarget<PhotoItemViewModel>(sender);

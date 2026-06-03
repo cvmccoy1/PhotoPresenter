@@ -117,9 +117,15 @@
                               IsChecked="{Binding ShowAllPhotos}"
                               VerticalAlignment="Center"
                               FontSize="10" Foreground="#555" Margin="4,0,0,0"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Sort by Date"
+                            Click="SortByDate_Click"
+                            VerticalAlignment="Center"
+                            Padding="6,1" Margin="0,0,8,0"
+                            FontSize="10" Cursor="Hand"/>
                     <TextBlock FontWeight="SemiBold" FontSize="11" Foreground="#555" VerticalAlignment="Center">
                         <TextBlock.Text>
-                            <Binding Path="SelectedFolder.Name" StringFormat="PHOTOS IN: {0}"/>
+                            <Binding Path="SelectedFolder.Name" StringFormat="PHOTOS/VIDEOS IN: {0}"/>
                         </TextBlock.Text>
                     </TextBlock>
                 </DockPanel>
@@ -191,9 +197,9 @@
                                     </MenuItem>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
-                            <Border Width="154" Height="104" Background="#CCC" ClipToBounds="True">
+                            <Border Width="154" Height="104" Background="Transparent" ClipToBounds="True">
                                 <Grid>
-                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform"/>
                                     <Grid Background="#1A1A1A">
                                         <Grid.Style>
                                             <Style TargetType="Grid">

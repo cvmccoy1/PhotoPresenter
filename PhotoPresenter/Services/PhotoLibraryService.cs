@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using PhotoPresenter.Models;
@@ -40,9 +41,9 @@ public class PhotoLibraryService : IPhotoLibraryService
             foreach (var dir in activeDirs)
                 result.Add(new PhotoFolder
                 {
-                    Name   = dir.Name,
+                    Name     = dir.Name,
                     FullPath = dir.FullName,
-                    Photos = LoadPhotosForFolder(dir.FullName)
+                    Photos   = LoadPhotosForFolder(dir.FullName)
                 });
 
             foreach (var name in removedNames)
@@ -106,13 +107,19 @@ public class PhotoLibraryService : IPhotoLibraryService
 
         var sidecarPath = Path.Combine(folderPath, PhotoOrderFile);
         if (!File.Exists(sidecarPath))
-            return files.OrderBy(f => f.CreationTime).Select(ToPhotoItem).ToList();
+        {
+            var items = files.Select(f => ToPhotoItem(f)).ToList();
+            return items.OrderBy(p => p.CreationDate).ToList();
+        }
 
         try
         {
             var sidecar = JsonSerializer.Deserialize<PhotoOrderSidecar>(File.ReadAllText(sidecarPath));
             if (sidecar?.Order == null)
-                return files.OrderBy(f => f.CreationTime).Select(ToPhotoItem).ToList();
+            {
+                var items = files.Select(f => ToPhotoItem(f)).ToList();
+                return items.OrderBy(p => p.CreationDate).ToList();
+            }
 
             var removedNames = sidecar.Removed ?? new();
             var removedSet   = new HashSet<string>(removedNames, StringComparer.OrdinalIgnoreCase);
@@ -125,39 +132,81 @@ public class PhotoLibraryService : IPhotoLibraryService
                 if (mutable.Remove(name, out var file))
                     result.Add(ToPhotoItem(file));
 
-            // New files (not in order, not in removed) appended by creation date
-            foreach (var file in mutable.Values
+            // New files (not in sidecar, not removed) appended by effective date
+            var newItems = mutable.Values
                 .Where(f => !removedSet.Contains(f.Name))
-                .OrderBy(f => f.CreationTime))
-                result.Add(ToPhotoItem(file));
+                .Select(f => ToPhotoItem(f))
+                .OrderBy(p => p.CreationDate)
+                .ToList();
+            foreach (var item in newItems)
+                result.Add(item);
 
             // Removed files that still exist on disk
             foreach (var name in removedNames)
                 if (allFiles.TryGetValue(name, out var file))
-                    result.Add(new PhotoItem
-                    {
-                        FileName     = file.Name,
-                        FullPath     = file.FullName,
-                        CreationDate = file.CreationTime,
-                        IsRemoved    = true,
-                        IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name))
-                    });
+                    result.Add(ToPhotoItem(file, isRemoved: true));
 
             return result;
         }
         catch
         {
-            return files.OrderBy(f => f.CreationTime).Select(ToPhotoItem).ToList();
+            var items = files.Select(f => ToPhotoItem(f)).ToList();
+            return items.OrderBy(p => p.CreationDate).ToList();
         }
     }
 
-    private static PhotoItem ToPhotoItem(FileInfo file) => new()
+    private static PhotoItem ToPhotoItem(FileInfo file, bool isRemoved = false) => new()
     {
         FileName     = file.Name,
         FullPath     = file.FullName,
-        CreationDate = file.CreationTime,
+        CreationDate = GetEffectiveDate(file),
+        IsRemoved    = isRemoved,
         IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name))
     };
+
+    // Fast filesystem-only date used during library load.
+    private static DateTime GetEffectiveDate(FileInfo file) =>
+        file.LastWriteTime < file.CreationTime ? file.LastWriteTime : file.CreationTime;
+
+    // EXIF-aware date used only when the user explicitly sorts by date.
+    // Matches File Explorer: prefer EXIF Date Taken for photos, else LastWriteTime.
+    public DateTime GetEffectiveDateWithExif(PhotoItem item)
+    {
+        if (!item.IsVideo)
+        {
+            var exif = TryGetExifDate(item.FullPath);
+            if (exif.HasValue) return exif.Value;
+        }
+        var file = new FileInfo(item.FullPath);
+        return file.Exists ? file.LastWriteTime : item.CreationDate;
+    }
+
+    // Reads EXIF DateTaken from an image file without decoding pixels.
+    private static DateTime? TryGetExifDate(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var decoder = BitmapDecoder.Create(stream,
+                BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnDemand);
+
+            if (decoder.Frames[0].Metadata is not BitmapMetadata meta) return null;
+
+            var raw = meta.DateTaken;
+            if (string.IsNullOrEmpty(raw)) return null;
+
+            // Standard EXIF format: "YYYY:MM:DD HH:MM:SS"
+            if (DateTime.TryParseExact(raw, "yyyy:MM:dd HH:mm:ss",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                return dt;
+
+            // Fall back to general parse for non-standard formats
+            if (DateTime.TryParse(raw, out var dt2))
+                return dt2;
+        }
+        catch { }
+        return null;
+    }
 
     // folders must be ordered: active first, then removed (IsRemoved=true).
     public void SaveFolderOrder(string parentPath, IEnumerable<PhotoFolder> folders)
