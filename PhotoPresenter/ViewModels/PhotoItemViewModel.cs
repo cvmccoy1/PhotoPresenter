@@ -18,12 +18,20 @@ public partial class PhotoItemViewModel : ObservableObject
     [ObservableProperty] private ImageSource? _thumbnail;
     [ObservableProperty] private bool _isRemoved;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCaption))]
+    private string _caption = "";
+
+    public bool HasCaption => !string.IsNullOrEmpty(Caption);
+
     partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
+    partial void OnCaptionChanged(string value)  => Model.Caption  = value;
 
     public PhotoItemViewModel(PhotoItem model)
     {
-        Model = model;
+        Model    = model;
         _isRemoved = model.IsRemoved;
+        _caption   = model.Caption;
         _ = LoadThumbnailAsync();
     }
 

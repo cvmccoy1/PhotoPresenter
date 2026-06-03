@@ -7,4 +7,5 @@ public class PhotoItem
     public DateTime CreationDate { get; set; }
     public bool IsRemoved { get; set; }
     public bool IsVideo { get; set; }
+    public string Caption { get; set; } = "";
 }

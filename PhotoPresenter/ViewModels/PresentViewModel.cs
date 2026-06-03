@@ -39,6 +39,12 @@ public partial class PresentViewModel : ObservableObject
     [ObservableProperty] private string _playPauseIcon = "▶";
     [ObservableProperty] private double _videoRotation;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCurrentCaption))]
+    private string _currentCaption = "";
+
+    public bool HasCurrentCaption => !string.IsNullOrEmpty(CurrentCaption);
+
     partial void OnIsPlayingChanged(bool value) => PlayPauseIcon = value ? "⏸" : "▶";
 
     public void RotateVideo() => VideoRotation = (VideoRotation + 90) % 360;
@@ -149,6 +155,7 @@ public partial class PresentViewModel : ObservableObject
             IsPlaying = false;
             PositionLabel = "";
             VideoRotation = 0;
+            CurrentCaption = photo.Caption;
             CurrentVideoPath = photo.FullPath;
             UpdateLabels();
             return;
@@ -171,6 +178,7 @@ public partial class PresentViewModel : ObservableObject
             if (seq == _loadSequence)
             {
                 CurrentImage = cached;
+                CurrentCaption = photo.Caption;
                 UpdateLabels();
                 _ = PreloadNextAsync();
             }
@@ -183,6 +191,7 @@ public partial class PresentViewModel : ObservableObject
             if (seq == _loadSequence)
             {
                 CurrentImage = bmp;
+                CurrentCaption = photo.Caption;
                 UpdateLabels();
                 _ = PreloadNextAsync();
             }

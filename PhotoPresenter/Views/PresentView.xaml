@@ -161,6 +161,33 @@
             </TextBlock>
         </Border>
 
+        <!-- Caption overlay (bottom-centre, above controls, both modes) -->
+        <Border VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+                Background="#AA000000"
+                CornerRadius="4"
+                Padding="16,7"
+                Margin="0,0,0,96"
+                MaxWidth="900"
+                IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasCurrentCaption}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding CurrentCaption}"
+                       Foreground="White"
+                       FontSize="18"
+                       FontFamily="Segoe UI"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"/>
+        </Border>
+
         <!-- Video controls bar (bottom, visible when CurrentIsVideo) -->
         <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="12,8">
             <Border.Style>

@@ -177,6 +177,31 @@ public partial class OrganiseView : UserControl
         if (photo != null) Vm?.RestorePhoto(photo);
     }
 
+    private void PhotoCaptionAdd_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) ShowCaptionDialog(photo);
+    }
+
+    private void PhotoCaptionEdit_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) ShowCaptionDialog(photo);
+    }
+
+    private void PhotoCaptionDelete_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) Vm?.SetCaption(photo, "");
+    }
+
+    private void ShowCaptionDialog(PhotoItemViewModel photo)
+    {
+        var dlg = new CaptionDialog(photo.Caption) { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() == true)
+            Vm?.SetCaption(photo, dlg.Caption);
+    }
+
     // ── Insertion adorner ──────────────────────────────────────────────────────
 
     private void SetFolderAdorner(ListBoxItem container, bool insertBefore)

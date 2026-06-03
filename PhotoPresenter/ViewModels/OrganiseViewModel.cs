@@ -176,6 +176,13 @@ public partial class OrganiseViewModel : ObservableObject
         OnPropertyChanged(nameof(PhotoCountLabel));
     }
 
+    public void SetCaption(PhotoItemViewModel photo, string caption)
+    {
+        photo.Caption = caption;
+        if (SelectedFolder != null)
+            SaveAllPhotoOrder(SelectedFolder);
+    }
+
     public async Task SortPhotosByDateAsync()
     {
         if (SelectedFolder == null) return;
