@@ -11,12 +11,15 @@ public partial class PhotoItemViewModel : ObservableObject
     public string FileName => Model.FileName;
     public string FullPath => Model.FullPath;
 
-    [ObservableProperty]
-    private ImageSource? _thumbnail;
+    [ObservableProperty] private ImageSource? _thumbnail;
+    [ObservableProperty] private bool _isRemoved;
+
+    partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
 
     public PhotoItemViewModel(PhotoItem model)
     {
         Model = model;
+        _isRemoved = model.IsRemoved;
         _ = LoadThumbnailAsync();
     }
 

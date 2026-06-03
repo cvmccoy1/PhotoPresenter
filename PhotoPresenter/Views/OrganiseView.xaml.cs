@@ -34,6 +34,7 @@ public partial class OrganiseView : UserControl
 
     private void FolderList_PreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (Vm?.ShowAllFolders == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
 
@@ -82,6 +83,12 @@ public partial class OrganiseView : UserControl
         if (folder != null) Vm?.RemoveFolder(folder);
     }
 
+    private void FolderRestore_Click(object sender, RoutedEventArgs e)
+    {
+        var folder = ContextMenuTarget<PhotoFolderViewModel>(sender);
+        if (folder != null) Vm?.RestoreFolder(folder);
+    }
+
     // ── Photo list ─────────────────────────────────────────────────────────────
 
     private void PhotoList_KeyDown(object sender, KeyEventArgs e)
@@ -100,6 +107,7 @@ public partial class OrganiseView : UserControl
 
     private void PhotoList_PreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (Vm?.ShowAllPhotos == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
 
@@ -148,6 +156,12 @@ public partial class OrganiseView : UserControl
     {
         var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
         if (photo != null) Vm?.RemovePhoto(photo);
+    }
+
+    private void PhotoRestore_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) Vm?.RestorePhoto(photo);
     }
 
     // ── Insertion adorner ──────────────────────────────────────────────────────

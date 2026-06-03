@@ -16,11 +16,19 @@
 
         <!-- Left: Folder list -->
         <DockPanel Grid.Column="0" Background="White">
-            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,6">
-                <TextBlock Text="FOLDERS" FontWeight="SemiBold" FontSize="11" Foreground="#555"/>
+            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,5">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right"
+                              Content="Show All"
+                              IsChecked="{Binding ShowAllFolders}"
+                              VerticalAlignment="Center"
+                              FontSize="10" Foreground="#555" Margin="4,0,0,0"/>
+                    <TextBlock Text="FOLDERS" FontWeight="SemiBold" FontSize="11"
+                               Foreground="#555" VerticalAlignment="Center"/>
+                </DockPanel>
             </Border>
             <ListBox x:Name="FolderList"
-                     ItemsSource="{Binding Folders}"
+                     ItemsSource="{Binding CurrentFolderItems}"
                      SelectedItem="{Binding SelectedFolder}"
                      BorderThickness="0"
                      AllowDrop="True"
@@ -40,10 +48,40 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                            <Setter Property="Opacity" Value="0.4"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Remove from Presentation"
-                                              Click="FolderRemove_Click"/>
+                                    <MenuItem Header="Remove from Presentation" Click="FolderRemove_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="Add to Presentation" Click="FolderRestore_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
                             <Border Width="72" Height="54" Background="#DDD" ClipToBounds="True" Margin="0,0,8,0">
@@ -68,15 +106,22 @@
 
         <!-- Right: Photo grid -->
         <DockPanel Grid.Column="2">
-            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,6">
-                <TextBlock FontWeight="SemiBold" FontSize="11" Foreground="#555">
-                    <TextBlock.Text>
-                        <Binding Path="SelectedFolder.Name" StringFormat="PHOTOS IN: {0}"/>
-                    </TextBlock.Text>
-                </TextBlock>
+            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,5">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right"
+                              Content="Show All"
+                              IsChecked="{Binding ShowAllPhotos}"
+                              VerticalAlignment="Center"
+                              FontSize="10" Foreground="#555" Margin="4,0,0,0"/>
+                    <TextBlock FontWeight="SemiBold" FontSize="11" Foreground="#555" VerticalAlignment="Center">
+                        <TextBlock.Text>
+                            <Binding Path="SelectedFolder.Name" StringFormat="PHOTOS IN: {0}"/>
+                        </TextBlock.Text>
+                    </TextBlock>
+                </DockPanel>
             </Border>
             <ListBox x:Name="PhotoList"
-                     ItemsSource="{Binding Photos}"
+                     ItemsSource="{Binding CurrentPhotoItems}"
                      SelectedItem="{Binding SelectedPhoto}"
                      BorderThickness="0"
                      Background="#F8F8F8"
@@ -102,10 +147,40 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Width="154">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                            <Setter Property="Opacity" Value="0.4"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Remove from Presentation"
-                                              Click="PhotoRemove_Click"/>
+                                    <MenuItem Header="Remove from Presentation" Click="PhotoRemove_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="Add to Presentation" Click="PhotoRestore_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
                             <Border Width="154" Height="104" Background="#CCC" ClipToBounds="True">

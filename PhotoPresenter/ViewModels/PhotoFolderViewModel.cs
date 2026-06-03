@@ -8,22 +8,39 @@ namespace PhotoPresenter.ViewModels;
 public partial class PhotoFolderViewModel : ObservableObject
 {
     public PhotoFolder Model { get; }
-    public string Name => Model.Name;
+    public string Name     => Model.Name;
     public string FullPath => Model.FullPath;
 
-    [ObservableProperty]
-    private ImageSource? _thumbnail;
+    [ObservableProperty] private ImageSource? _thumbnail;
+    [ObservableProperty] private bool _isRemoved;
 
+    partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
+
+    // Active photos only — used for Present mode navigation and normal Organise view.
     public ObservableCollection<PhotoItemViewModel> Photos { get; } = new();
+
+    // All photos including removed — used for Show All mode.
+    public ObservableCollection<PhotoItemViewModel> AllPhotoItems { get; } = new();
 
     public PhotoFolderViewModel(PhotoFolder model)
     {
         Model = model;
-        foreach (var p in model.Photos)
-            Photos.Add(new PhotoItemViewModel(p));
+        _isRemoved = model.IsRemoved;
 
-        if (model.Photos.Count > 0)
-            _ = LoadThumbnailAsync(model.Photos[0].FullPath);
+        // model.Photos is ordered: active first, then removed at end.
+        foreach (var p in model.Photos)
+        {
+            var vm = new PhotoItemViewModel(p);
+            AllPhotoItems.Add(vm);
+            if (!p.IsRemoved)
+                Photos.Add(vm);
+        }
+
+        // Thumbnail from first active photo; fall back to any photo.
+        var thumbPath = model.Photos.FirstOrDefault(p => !p.IsRemoved)?.FullPath
+                     ?? model.Photos.FirstOrDefault()?.FullPath;
+        if (thumbPath != null)
+            _ = LoadThumbnailAsync(thumbPath);
     }
 
     private async Task LoadThumbnailAsync(string path)
