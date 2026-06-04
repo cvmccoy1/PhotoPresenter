@@ -46,20 +46,22 @@ public partial class MainWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        // RestoreBounds gives the Normal-state rect even when maximized/fullscreen
+        // Reload to pick up any mid-session saves (e.g. splitter position).
+        var settings = UserSettings.Load();
+
         var bounds = WindowState == WindowState.Normal
             ? new Rect(Left, Top, Width, Height)
             : RestoreBounds;
 
         if (!bounds.IsEmpty)
         {
-            _settings.WindowLeft   = bounds.Left;
-            _settings.WindowTop    = bounds.Top;
-            _settings.WindowWidth  = bounds.Width;
-            _settings.WindowHeight = bounds.Height;
+            settings.WindowLeft   = bounds.Left;
+            settings.WindowTop    = bounds.Top;
+            settings.WindowWidth  = bounds.Width;
+            settings.WindowHeight = bounds.Height;
         }
-        _settings.WindowMaximized = _organiseWindowState == WindowState.Maximized;
-        _settings.Save();
+        settings.WindowMaximized = _organiseWindowState == WindowState.Maximized;
+        settings.Save();
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)

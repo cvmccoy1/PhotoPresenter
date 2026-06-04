@@ -9,7 +9,7 @@
              Background="#F0F0F0">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="150"/>
+            <ColumnDefinition x:Name="FolderColumn" Width="280" MinWidth="150"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -28,12 +28,8 @@
                 </DockPanel>
             </Border>
             <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
-                <StackPanel>
-                    <TextBlock Text="{Binding FolderCountLabel}"
-                               FontSize="11" Foreground="#555"/>
-                    <TextBlock Text="{Binding FolderMediaSummaryLabel}"
-                               FontSize="11" Foreground="#555"/>
-                </StackPanel>
+                <TextBlock Text="{Binding FolderCountLabel}"
+                           FontSize="11" Foreground="#555"/>
             </Border>
             <ListBox x:Name="FolderList"
                      ItemsSource="{Binding CurrentFolderItems}"
@@ -111,7 +107,7 @@
         </DockPanel>
 
         <!-- Splitter -->
-        <GridSplitter Grid.Column="1"
+        <GridSplitter x:Name="FolderSplitter" Grid.Column="1"
                       Width="5"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"

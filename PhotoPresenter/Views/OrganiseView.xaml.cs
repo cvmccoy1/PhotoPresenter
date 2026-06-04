@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using PhotoPresenter.Services;
 using PhotoPresenter.ViewModels;
 
 namespace PhotoPresenter.Views;
@@ -13,7 +15,27 @@ public partial class OrganiseView : UserControl
     private Point _dragStartPoint;
     private InsertionAdorner? _adorner;
 
-    public OrganiseView() => InitializeComponent();
+    public OrganiseView()
+    {
+        InitializeComponent();
+        Loaded += OnLoaded;
+        FolderSplitter.AddHandler(Thumb.DragCompletedEvent,
+            new DragCompletedEventHandler(OnSplitterDragCompleted));
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        var pos = UserSettings.Load().SplitterPosition;
+        if (pos.HasValue && pos.Value >= FolderColumn.MinWidth)
+            FolderColumn.Width = new GridLength(pos.Value);
+    }
+
+    private void OnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        var settings = UserSettings.Load();
+        settings.SplitterPosition = FolderColumn.ActualWidth;
+        settings.Save();
+    }
 
     private OrganiseViewModel? Vm => DataContext as OrganiseViewModel;
 
