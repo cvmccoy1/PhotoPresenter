@@ -48,7 +48,7 @@ A Windows WPF application for presenting family photo and video collections on a
   - **↺** — restart from the beginning
   - **▶ / ⏸** — play / pause
   - Position display — current time and total duration (e.g. 0:23 / 3:16)
-  - **↻ 90°** — rotate the video 90° clockwise (resets for each new video)
+  - **↻ 90°** — rotate the video 90° clockwise; videos are auto-rotated on load using the orientation metadata written by phone cameras, so portrait videos display upright automatically
   - Volume slider
 
 ## Requirements
