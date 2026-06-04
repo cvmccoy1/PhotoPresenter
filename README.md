@@ -24,6 +24,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**; with a multi-selection, these become **Set Caption** (writes the same caption to all selected items) and **Delete Caption** (removes captions from all that have one)
   - The caption appears in italic below the thumbnail in Organise mode
   - The caption is overlaid at the bottom of the screen in Present mode
+- **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, and caption changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - Click a folder (and optionally an item) before switching to Present mode to start from that point
 - Window size, position, and the splitter position between the Folders and Photos/Videos panes are all remembered between sessions
