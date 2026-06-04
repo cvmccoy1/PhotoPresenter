@@ -15,6 +15,9 @@ public partial class OrganiseView : UserControl
     private Point _dragStartPoint;
     private InsertionAdorner? _adorner;
 
+    private const string FolderDragFormat = "PhotoPresenter.FolderDrag";
+    private const string PhotoDragFormat  = "PhotoPresenter.PhotoDrag";
+
     public OrganiseView()
     {
         InitializeComponent();
@@ -55,6 +58,9 @@ public partial class OrganiseView : UserControl
     private void FolderList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
+        if (HitTestContainer(FolderList, e.GetPosition(FolderList)) == null
+            && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+            FolderList.UnselectAll();
     }
 
     private void FolderList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -72,8 +78,10 @@ public partial class OrganiseView : UserControl
                     .ToList()
                 : new List<PhotoFolderViewModel> { item };
 
+            var folderDataObj = new DataObject();
+            folderDataObj.SetData(FolderDragFormat, dragList);
             FolderList.QueryContinueDrag += CancelDragOnEscape;
-            DragDrop.DoDragDrop(FolderList, dragList, DragDropEffects.Move);
+            DragDrop.DoDragDrop(FolderList, folderDataObj, DragDropEffects.Move);
             FolderList.QueryContinueDrag -= CancelDragOnEscape;
             RemoveAdorner();
             _dragStartPoint = Mouse.GetPosition(null);
@@ -82,7 +90,7 @@ public partial class OrganiseView : UserControl
 
     private void FolderList_DragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(typeof(List<PhotoFolderViewModel>)))
+        if (!e.Data.GetDataPresent(FolderDragFormat))
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -105,8 +113,8 @@ public partial class OrganiseView : UserControl
     private void FolderList_Drop(object sender, DragEventArgs e)
     {
         RemoveAdorner();
-        if (!e.Data.GetDataPresent(typeof(List<PhotoFolderViewModel>))) return;
-        var dragging = (List<PhotoFolderViewModel>)e.Data.GetData(typeof(List<PhotoFolderViewModel>));
+        if (!e.Data.GetDataPresent(FolderDragFormat)) return;
+        var dragging = (List<PhotoFolderViewModel>)e.Data.GetData(FolderDragFormat);
         if (Vm == null || dragging.Count == 0) return;
 
         // Do nothing if the cursor is over one of the items being dragged.
@@ -164,6 +172,9 @@ public partial class OrganiseView : UserControl
     private void PhotoList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
+        if (HitTestContainer(PhotoList, e.GetPosition(PhotoList)) == null
+            && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+            PhotoList.UnselectAll();
     }
 
     private void PhotoList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -183,8 +194,10 @@ public partial class OrganiseView : UserControl
                     .ToList()
                 : new List<PhotoItemViewModel> { item };
 
+            var photoDataObj = new DataObject();
+            photoDataObj.SetData(PhotoDragFormat, dragList);
             PhotoList.QueryContinueDrag += CancelDragOnEscape;
-            DragDrop.DoDragDrop(PhotoList, dragList, DragDropEffects.Move);
+            DragDrop.DoDragDrop(PhotoList, photoDataObj, DragDropEffects.Move);
             PhotoList.QueryContinueDrag -= CancelDragOnEscape;
             RemoveAdorner();
             _dragStartPoint = Mouse.GetPosition(null);
@@ -193,7 +206,7 @@ public partial class OrganiseView : UserControl
 
     private void PhotoList_DragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(typeof(List<PhotoItemViewModel>)))
+        if (!e.Data.GetDataPresent(PhotoDragFormat))
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -216,8 +229,8 @@ public partial class OrganiseView : UserControl
     private void PhotoList_Drop(object sender, DragEventArgs e)
     {
         RemoveAdorner();
-        if (!e.Data.GetDataPresent(typeof(List<PhotoItemViewModel>))) return;
-        var dragging = (List<PhotoItemViewModel>)e.Data.GetData(typeof(List<PhotoItemViewModel>));
+        if (!e.Data.GetDataPresent(PhotoDragFormat)) return;
+        var dragging = (List<PhotoItemViewModel>)e.Data.GetData(PhotoDragFormat);
         if (Vm == null || dragging.Count == 0) return;
 
         var target = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
@@ -329,8 +342,9 @@ public partial class OrganiseView : UserControl
 
     private void PhotoCaptionDelete_Click(object sender, RoutedEventArgs e)
     {
-        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
-        if (photo != null) Vm?.SetCaption(photo, "");
+        if (Vm == null) return;
+        foreach (var photo in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.HasCaption))
+            Vm.SetCaption(photo, "");
     }
 
     private void ShowCaptionDialog(PhotoItemViewModel photo)
