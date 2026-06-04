@@ -9,6 +9,7 @@ A Windows WPF application for presenting family photo and video collections on a
 ### Organise Mode
 - Browse a parent folder containing subfolders of photos and videos
 - Drag and drop subfolders to set a custom presentation order
+- Click **Sort by Name** in the Folders pane to sort all folders alphabetically (A→Z); a confirmation is shown before the saved order is updated
 - Select a subfolder and drag and drop its items to reorder them
 - Both panes support multi-selection: **Ctrl+Click** toggles an item, **Shift+Click** selects a range, **Ctrl+A** selects all; clicking empty space clears the selection
 - Drag a selected item to move the entire selection together, preserving relative order
