@@ -53,9 +53,7 @@ public partial class OrganiseView : UserControl
     {
         if (e.Key == Key.Delete && Vm != null)
         {
-            foreach (var folder in FolderList.SelectedItems.OfType<PhotoFolderViewModel>()
-                .Where(f => !f.IsRemoved).ToList())
-                Vm.RemoveFolder(folder);
+            Vm.RemoveFolders(FolderList.SelectedItems.OfType<PhotoFolderViewModel>().ToList());
             e.Handled = true;
         }
     }
@@ -165,15 +163,13 @@ public partial class OrganiseView : UserControl
     private void FolderRemove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
-        foreach (var f in SelectedTargets<PhotoFolderViewModel>(FolderList, sender).Where(f => !f.IsRemoved))
-            Vm.RemoveFolder(f);
+        Vm.RemoveFolders(SelectedTargets<PhotoFolderViewModel>(FolderList, sender));
     }
 
     private void FolderRestore_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
-        foreach (var f in SelectedTargets<PhotoFolderViewModel>(FolderList, sender).Where(f => f.IsRemoved))
-            Vm.RestoreFolder(f);
+        Vm.RestoreFolders(SelectedTargets<PhotoFolderViewModel>(FolderList, sender));
     }
 
     private void FolderTile_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -199,9 +195,7 @@ public partial class OrganiseView : UserControl
     {
         if (e.Key == Key.Delete && Vm != null)
         {
-            foreach (var photo in PhotoList.SelectedItems.OfType<PhotoItemViewModel>()
-                .Where(p => !p.IsRemoved).ToList())
-                Vm.RemovePhoto(photo);
+            Vm.RemovePhotos(PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList());
             e.Handled = true;
         }
     }
@@ -348,15 +342,13 @@ public partial class OrganiseView : UserControl
     private void PhotoRemove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
-        foreach (var p in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => !p.IsRemoved))
-            Vm.RemovePhoto(p);
+        Vm.RemovePhotos(SelectedTargets<PhotoItemViewModel>(PhotoList, sender));
     }
 
     private void PhotoRestore_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
-        foreach (var p in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.IsRemoved))
-            Vm.RestorePhoto(p);
+        Vm.RestorePhotos(SelectedTargets<PhotoItemViewModel>(PhotoList, sender));
     }
 
     private void PhotoTile_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -399,8 +391,7 @@ public partial class OrganiseView : UserControl
         var existing = selected.FirstOrDefault(p => p.HasCaption)?.Caption ?? "";
         var dlg = new CaptionDialog(existing) { Owner = Window.GetWindow(this) };
         if (dlg.ShowDialog() == true)
-            foreach (var photo in selected)
-                Vm.SetCaption(photo, dlg.Caption);
+            Vm.SetCaptions(selected, dlg.Caption);
     }
 
     private void PhotoTile_MouseEnter(object sender, MouseEventArgs e)
@@ -424,8 +415,7 @@ public partial class OrganiseView : UserControl
     private void PhotoCaptionDelete_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
-        foreach (var photo in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.HasCaption))
-            Vm.SetCaption(photo, "");
+        Vm.SetCaptions(SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.HasCaption).ToList(), "");
     }
 
     private void ShowCaptionDialog(PhotoItemViewModel photo)

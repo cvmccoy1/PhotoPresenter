@@ -26,6 +26,11 @@
                            Foreground="#555"
                            FontSize="12"/>
                 <Separator/>
+                <Button Content="↩ Undo"
+                        Click="Undo_Click"
+                        IsEnabled="{Binding OrganiseVM.CanUndo}"
+                        Padding="6,3" Margin="2"/>
+                <Separator/>
                 <Button Content="▶  Present"
                         Command="{Binding SwitchToPresentCommand}"
                         Padding="8,3" Margin="2"

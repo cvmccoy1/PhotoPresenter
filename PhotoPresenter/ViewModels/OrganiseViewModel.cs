@@ -88,6 +88,94 @@ public partial class OrganiseViewModel : ObservableObject
         }
     }
 
+    // ── Undo history ───────────────────────────────────────────────────────────
+
+    private const int MaxUndoDepth = 20;
+
+    private sealed record FolderSnapshot(
+        IReadOnlyList<(PhotoFolderViewModel Vm, bool IsRemoved)> Items);
+
+    private sealed record PhotoSnapshot(
+        PhotoFolderViewModel Folder,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption)> Items);
+
+    private readonly List<object> _undoStack = new();
+
+    public bool CanUndo => _undoStack.Count > 0;
+
+    private void PushFolderUndo()
+    {
+        _undoStack.Add(new FolderSnapshot(
+            _allFolderItems.Select(f => (f, f.IsRemoved)).ToArray()));
+        if (_undoStack.Count > MaxUndoDepth) _undoStack.RemoveAt(0);
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    private void PushPhotoUndo(PhotoFolderViewModel folder)
+    {
+        _undoStack.Add(new PhotoSnapshot(folder,
+            folder.AllPhotoItems.Select(p => (p, p.IsRemoved, p.Caption)).ToArray()));
+        if (_undoStack.Count > MaxUndoDepth) _undoStack.RemoveAt(0);
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    public void Undo()
+    {
+        if (_undoStack.Count == 0) return;
+        var entry = _undoStack[^1];
+        _undoStack.RemoveAt(_undoStack.Count - 1);
+
+        if (entry is FolderSnapshot fs)
+            ApplyFolderSnapshot(fs);
+        else if (entry is PhotoSnapshot ps)
+            ApplyPhotoSnapshot(ps);
+
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    private void ApplyFolderSnapshot(FolderSnapshot snap)
+    {
+        Folders.Clear();
+        _allFolderItems.Clear();
+
+        foreach (var (vm, wasRemoved) in snap.Items)
+        {
+            vm.IsRemoved = wasRemoved;
+            _allFolderItems.Add(vm);
+            if (!wasRemoved) Folders.Add(vm);
+        }
+
+        SaveAllFolderOrder();
+        OnPropertyChanged(nameof(FolderCountLabel));
+
+        if (SelectedFolder == null || !Folders.Contains(SelectedFolder))
+            SelectedFolder = Folders.FirstOrDefault();
+    }
+
+    private void ApplyPhotoSnapshot(PhotoSnapshot snap)
+    {
+        var folder = snap.Folder;
+
+        folder.Photos.Clear();
+        folder.AllPhotoItems.Clear();
+
+        foreach (var (vm, wasRemoved, caption) in snap.Items)
+        {
+            vm.IsRemoved = wasRemoved;
+            vm.Caption   = caption;
+            folder.AllPhotoItems.Add(vm);
+            if (!wasRemoved) folder.Photos.Add(vm);
+        }
+
+        SaveAllPhotoOrder(folder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
+
+        if (SelectedPhoto == null || !folder.Photos.Contains(SelectedPhoto))
+            SelectedPhoto = folder.Photos.FirstOrDefault();
+    }
+
+    // ── Constructor / Load ─────────────────────────────────────────────────────
+
     public OrganiseViewModel(IPhotoLibraryService library)
     {
         _library = library;
@@ -115,6 +203,8 @@ public partial class OrganiseViewModel : ObservableObject
         SelectedFolder = Folders.Count > 0 ? Folders[0] : null;
         OnPropertyChanged(nameof(FolderCountLabel));
 
+        _undoStack.Clear();
+        OnPropertyChanged(nameof(CanUndo));
     }
 
     // ── Folder operations ──────────────────────────────────────────────────────
@@ -123,6 +213,8 @@ public partial class OrganiseViewModel : ObservableObject
     {
         var present = items.Where(f => Folders.Contains(f)).ToList();
         if (present.Count == 0) return;
+
+        PushFolderUndo();
 
         // Adjust the insertion slot for items that will be removed ahead of it.
         int adjustedSlot = slot - present.Count(f => Folders.IndexOf(f) < slot);
@@ -144,27 +236,40 @@ public partial class OrganiseViewModel : ObservableObject
         SaveAllFolderOrder();
     }
 
-    public void RemoveFolder(PhotoFolderViewModel folder)
+    public void RemoveFolders(IList<PhotoFolderViewModel> folders)
     {
-        folder.IsRemoved = true;
-        Folders.Remove(folder);
-        if (SelectedFolder == folder)
+        var targets = folders.Where(f => !f.IsRemoved).ToList();
+        if (targets.Count == 0) return;
+        PushFolderUndo();
+        foreach (var f in targets)
+        {
+            f.IsRemoved = true;
+            Folders.Remove(f);
+            _allFolderItems.Move(_allFolderItems.IndexOf(f), _allFolderItems.Count - 1);
+        }
+        if (SelectedFolder != null && SelectedFolder.IsRemoved)
             SelectedFolder = Folders.FirstOrDefault();
-        _allFolderItems.Move(_allFolderItems.IndexOf(folder), _allFolderItems.Count - 1);
         SaveAllFolderOrder();
         OnPropertyChanged(nameof(FolderCountLabel));
-
     }
 
-    public void RestoreFolder(PhotoFolderViewModel folder)
+    public void RestoreFolders(IList<PhotoFolderViewModel> folders)
     {
-        folder.IsRemoved = false;
-        Folders.Add(folder);
-        _allFolderItems.Move(_allFolderItems.IndexOf(folder), Folders.Count - 1);
+        var targets = folders.Where(f => f.IsRemoved).ToList();
+        if (targets.Count == 0) return;
+        PushFolderUndo();
+        foreach (var f in targets)
+        {
+            f.IsRemoved = false;
+            Folders.Add(f);
+            _allFolderItems.Move(_allFolderItems.IndexOf(f), Folders.Count - 1);
+        }
         SaveAllFolderOrder();
         OnPropertyChanged(nameof(FolderCountLabel));
-
     }
+
+    public void RemoveFolder(PhotoFolderViewModel folder) => RemoveFolders(new[] { folder });
+    public void RestoreFolder(PhotoFolderViewModel folder) => RestoreFolders(new[] { folder });
 
     // ── Photo operations ───────────────────────────────────────────────────────
 
@@ -174,6 +279,8 @@ public partial class OrganiseViewModel : ObservableObject
         var folder = SelectedFolder;
         var present = items.Where(p => folder.Photos.Contains(p)).ToList();
         if (present.Count == 0) return;
+
+        PushPhotoUndo(folder);
 
         int adjustedSlot = slot - present.Count(p => folder.Photos.IndexOf(p) < slot);
         adjustedSlot = Math.Clamp(adjustedSlot, 0, folder.Photos.Count - present.Count);
@@ -193,39 +300,64 @@ public partial class OrganiseViewModel : ObservableObject
         SaveAllPhotoOrder(folder);
     }
 
-    public void RemovePhoto(PhotoItemViewModel photo)
+    public void RemovePhotos(IList<PhotoItemViewModel> photos)
     {
         if (SelectedFolder == null) return;
         var folder = SelectedFolder;
-        photo.IsRemoved = true;
-        folder.Photos.Remove(photo);
-        folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.AllPhotoItems.Count - 1);
+        var targets = photos.Where(p => !p.IsRemoved).ToList();
+        if (targets.Count == 0) return;
+        PushPhotoUndo(folder);
+        foreach (var p in targets)
+        {
+            p.IsRemoved = true;
+            folder.Photos.Remove(p);
+            folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(p), folder.AllPhotoItems.Count - 1);
+        }
         SaveAllPhotoOrder(folder);
         OnPropertyChanged(nameof(PhotoCountLabel));
-
     }
 
-    public void RestorePhoto(PhotoItemViewModel photo)
+    public void RestorePhotos(IList<PhotoItemViewModel> photos)
     {
         if (SelectedFolder == null) return;
         var folder = SelectedFolder;
-        photo.IsRemoved = false;
-        folder.Photos.Add(photo);
-        folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.Photos.Count - 1);
+        var targets = photos.Where(p => p.IsRemoved).ToList();
+        if (targets.Count == 0) return;
+        PushPhotoUndo(folder);
+        foreach (var p in targets)
+        {
+            p.IsRemoved = false;
+            folder.Photos.Add(p);
+            folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(p), folder.Photos.Count - 1);
+        }
         SaveAllPhotoOrder(folder);
         OnPropertyChanged(nameof(PhotoCountLabel));
-
     }
+
+    public void RemovePhoto(PhotoItemViewModel photo) => RemovePhotos(new[] { photo });
+    public void RestorePhoto(PhotoItemViewModel photo) => RestorePhotos(new[] { photo });
 
     public void SetCaption(PhotoItemViewModel photo, string caption)
     {
+        if (SelectedFolder != null) PushPhotoUndo(SelectedFolder);
         photo.Caption = caption;
         if (SelectedFolder != null)
             SaveAllPhotoOrder(SelectedFolder);
     }
 
+    public void SetCaptions(IList<PhotoItemViewModel> photos, string caption)
+    {
+        if (SelectedFolder == null || photos.Count == 0) return;
+        PushPhotoUndo(SelectedFolder);
+        foreach (var p in photos)
+            p.Caption = caption;
+        SaveAllPhotoOrder(SelectedFolder);
+    }
+
     public void SortFoldersByName()
     {
+        PushFolderUndo();
+
         var prevSelected = SelectedFolder;
 
         var activeSorted  = Folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
@@ -250,6 +382,9 @@ public partial class OrganiseViewModel : ObservableObject
     {
         if (SelectedFolder == null) return;
         var folder = SelectedFolder;
+
+        PushPhotoUndo(folder);
+
         var prevSelected = SelectedPhoto;
 
         var activeSnapshot  = folder.Photos.ToList();

@@ -91,8 +91,20 @@ public partial class MainWindow : Window
     private void About_Click(object sender, RoutedEventArgs e) =>
         new AboutWindow { Owner = this }.ShowDialog();
 
+    private void Undo_Click(object sender, RoutedEventArgs e) =>
+        _vm.OrganiseVM.Undo();
+
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Z
+            && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0
+            && _vm.CurrentMode == AppMode.Organise)
+        {
+            _vm.OrganiseVM.Undo();
+            e.Handled = true;
+            return;
+        }
+
         if (_vm.CurrentMode != AppMode.Present) return;
 
         var pvm = _vm.PresentVM;
