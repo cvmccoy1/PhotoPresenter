@@ -2,6 +2,8 @@
 
 A Windows WPF application for presenting family photo and video collections on a TV. Browse and organise your media in one mode, then present it fullscreen in another.
 
+![PhotoPresenter Organise mode](docs/screenshot.png)
+
 ## Features
 
 ### Organise Mode
