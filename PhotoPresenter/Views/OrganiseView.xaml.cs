@@ -18,6 +18,11 @@ public partial class OrganiseView : UserControl
     private const string FolderDragFormat = "PhotoPresenter.FolderDrag";
     private const string PhotoDragFormat  = "PhotoPresenter.PhotoDrag";
 
+    // When the user clicks a selected item in a multi-selection, we defer the
+    // selection change until mouse-up so a drag can start with the full selection.
+    private PhotoFolderViewModel? _pendingFolderClick;
+    private PhotoItemViewModel?   _pendingPhotoClick;
+
     public OrganiseView()
     {
         InitializeComponent();
@@ -58,9 +63,39 @@ public partial class OrganiseView : UserControl
     private void FolderList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
-        if (HitTestContainer(FolderList, e.GetPosition(FolderList)) == null
+        var pos = e.GetPosition(FolderList);
+
+        if (HitTestContainer(FolderList, pos) == null)
+        {
+            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+                FolderList.UnselectAll();
+            _pendingFolderClick = null;
+            return;
+        }
+
+        var item = HitTestItem<PhotoFolderViewModel>(FolderList, pos);
+        if (item != null
+            && FolderList.SelectedItems.Contains(item)
+            && FolderList.SelectedItems.Count > 1
             && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
-            FolderList.UnselectAll();
+        {
+            // Suppress immediate selection change; resolve on mouse-up if no drag starts.
+            _pendingFolderClick = item;
+            e.Handled = true;
+        }
+        else
+        {
+            _pendingFolderClick = null;
+        }
+    }
+
+    private void FolderList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pendingFolderClick != null)
+        {
+            FolderList.SelectedItem = _pendingFolderClick;
+            _pendingFolderClick = null;
+        }
     }
 
     private void FolderList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -68,6 +103,8 @@ public partial class OrganiseView : UserControl
         if (Vm?.ShowAllFolders == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
+
+        _pendingFolderClick = null; // Commit to drag — no deferred click on mouse-up.
 
         var item = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
         if (item != null)
@@ -172,9 +209,38 @@ public partial class OrganiseView : UserControl
     private void PhotoList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
-        if (HitTestContainer(PhotoList, e.GetPosition(PhotoList)) == null
+        var pos = e.GetPosition(PhotoList);
+
+        if (HitTestContainer(PhotoList, pos) == null)
+        {
+            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+                PhotoList.UnselectAll();
+            _pendingPhotoClick = null;
+            return;
+        }
+
+        var item = HitTestItem<PhotoItemViewModel>(PhotoList, pos);
+        if (item != null
+            && PhotoList.SelectedItems.Contains(item)
+            && PhotoList.SelectedItems.Count > 1
             && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
-            PhotoList.UnselectAll();
+        {
+            _pendingPhotoClick = item;
+            e.Handled = true;
+        }
+        else
+        {
+            _pendingPhotoClick = null;
+        }
+    }
+
+    private void PhotoList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pendingPhotoClick != null)
+        {
+            PhotoList.SelectedItem = _pendingPhotoClick;
+            _pendingPhotoClick = null;
+        }
     }
 
     private void PhotoList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -182,6 +248,8 @@ public partial class OrganiseView : UserControl
         if (Vm?.ShowAllPhotos == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
+
+        _pendingPhotoClick = null;
 
         var item = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
         if (item != null)
