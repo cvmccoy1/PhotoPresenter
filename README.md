@@ -8,14 +8,17 @@ A Windows WPF application for presenting family photo and video collections on a
 - Browse a parent folder containing subfolders of photos and videos
 - Drag and drop subfolders to set a custom presentation order
 - Select a subfolder and drag and drop its items to reorder them
+- Both panes support multi-selection: **Ctrl+Click** toggles an item, **Shift+Click** selects a range, **Ctrl+A** selects all; clicking empty space clears the selection
+- Drag a selected item to move the entire selection together, preserving relative order
+- **Delete** removes all selected items from the presentation at once
 - Video files appear with a play-button thumbnail; the footer shows item counts as **x Items (y Photos, z Videos)**
 - The Folders pane footer shows the folder count and aggregate photo, video, and total counts across all visible folders on a single line (e.g. **5 folders · 48 Photos, 7 Videos, 55 Total**)
-- Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched
+- Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched; with a multi-selection, the menu adapts: **Remove from Presentation** appears if any selected items are visible, **Add to Presentation** if any are hidden, or both if mixed — each action applies only to the applicable items
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
 - Hover over a folder to see a tooltip showing the number of photos, videos, and total items in that folder
 - Right-click any photo or video and choose **Open** to open it in its default app, or **Open With…** to choose another app; double-clicking a tile does the same as **Open**
 - Hover over any photo or video tile to see a tooltip showing its type, date, dimensions (photos) or length (videos), and file size
-- Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**
+- Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**; with a multi-selection, these become **Set Caption** (writes the same caption to all selected items) and **Delete Caption** (removes captions from all that have one)
   - The caption appears in italic below the thumbnail in Organise mode
   - The caption is overlaid at the bottom of the screen in Present mode
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
