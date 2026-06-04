@@ -28,8 +28,12 @@
                 </DockPanel>
             </Border>
             <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
-                <TextBlock Text="{Binding FolderCountLabel}"
-                           FontSize="11" Foreground="#555"/>
+                <StackPanel>
+                    <TextBlock Text="{Binding FolderCountLabel}"
+                               FontSize="11" Foreground="#555"/>
+                    <TextBlock Text="{Binding FolderMediaSummaryLabel}"
+                               FontSize="11" Foreground="#555"/>
+                </StackPanel>
             </Border>
             <ListBox x:Name="FolderList"
                      ItemsSource="{Binding CurrentFolderItems}"
@@ -61,6 +65,11 @@
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
+                            <StackPanel.ToolTip>
+                                <ToolTip DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <TextBlock Text="{Binding FolderToolTipText}" FontFamily="Segoe UI" FontSize="11" LineHeight="18"/>
+                                </ToolTip>
+                            </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Remove from Presentation" Click="FolderRemove_Click">

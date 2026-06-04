@@ -19,6 +19,17 @@ public partial class PhotoFolderViewModel : ObservableObject
     // Active photos only — used for Present mode navigation and normal Organise view.
     public ObservableCollection<PhotoItemViewModel> Photos { get; } = new();
 
+    public string FolderToolTipText
+    {
+        get
+        {
+            int photos = Photos.Count(p => !p.IsVideo);
+            int videos = Photos.Count(p =>  p.IsVideo);
+            int total  = photos + videos;
+            return $"Photos: {photos}\nVideos: {videos}\nTotal:  {total}";
+        }
+    }
+
     // All photos including removed — used for Show All mode.
     public ObservableCollection<PhotoItemViewModel> AllPhotoItems { get; } = new();
 

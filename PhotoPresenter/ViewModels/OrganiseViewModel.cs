@@ -51,6 +51,17 @@ public partial class OrganiseViewModel : ObservableObject
         }
     }
 
+    public string FolderMediaSummaryLabel
+    {
+        get
+        {
+            int photos = Folders.Sum(f => f.Photos.Count(p => !p.IsVideo));
+            int videos = Folders.Sum(f => f.Photos.Count(p =>  p.IsVideo));
+            int total  = photos + videos;
+            return $"({photos} Photo{(photos == 1 ? "" : "s")}, {videos} Video{(videos == 1 ? "" : "s")}, {total} Total)";
+        }
+    }
+
     // Kept for backward compat (PresentViewModel reads SelectedFolder.Photos directly).
     public ObservableCollection<PhotoItemViewModel>? Photos => SelectedFolder?.Photos;
 
@@ -108,6 +119,7 @@ public partial class OrganiseViewModel : ObservableObject
 
         SelectedFolder = Folders.Count > 0 ? Folders[0] : null;
         OnPropertyChanged(nameof(FolderCountLabel));
+        OnPropertyChanged(nameof(FolderMediaSummaryLabel));
     }
 
     // ── Folder operations ──────────────────────────────────────────────────────
@@ -130,6 +142,7 @@ public partial class OrganiseViewModel : ObservableObject
         _allFolderItems.Move(_allFolderItems.IndexOf(folder), _allFolderItems.Count - 1);
         SaveAllFolderOrder();
         OnPropertyChanged(nameof(FolderCountLabel));
+        OnPropertyChanged(nameof(FolderMediaSummaryLabel));
     }
 
     public void RestoreFolder(PhotoFolderViewModel folder)
@@ -139,6 +152,7 @@ public partial class OrganiseViewModel : ObservableObject
         _allFolderItems.Move(_allFolderItems.IndexOf(folder), Folders.Count - 1);
         SaveAllFolderOrder();
         OnPropertyChanged(nameof(FolderCountLabel));
+        OnPropertyChanged(nameof(FolderMediaSummaryLabel));
     }
 
     // ── Photo operations ───────────────────────────────────────────────────────
@@ -163,6 +177,7 @@ public partial class OrganiseViewModel : ObservableObject
         folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.AllPhotoItems.Count - 1);
         SaveAllPhotoOrder(folder);
         OnPropertyChanged(nameof(PhotoCountLabel));
+        OnPropertyChanged(nameof(FolderMediaSummaryLabel));
     }
 
     public void RestorePhoto(PhotoItemViewModel photo)
@@ -174,6 +189,7 @@ public partial class OrganiseViewModel : ObservableObject
         folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(photo), folder.Photos.Count - 1);
         SaveAllPhotoOrder(folder);
         OnPropertyChanged(nameof(PhotoCountLabel));
+        OnPropertyChanged(nameof(FolderMediaSummaryLabel));
     }
 
     public void SetCaption(PhotoItemViewModel photo, string caption)
