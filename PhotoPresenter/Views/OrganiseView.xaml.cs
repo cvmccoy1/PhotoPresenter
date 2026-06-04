@@ -319,6 +319,19 @@ public partial class OrganiseView : UserControl
         Vm.ReorderPhotos(dragging, slot);
     }
 
+    private void SortByName_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        var result = MessageBox.Show(
+            Window.GetWindow(this),
+            "Reorder all folders alphabetically by name?\n\nThe saved order will be updated.",
+            "Sort by Name",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question);
+        if (result == MessageBoxResult.OK)
+            Vm.SortFoldersByName();
+    }
+
     private async void SortByDate_Click(object sender, RoutedEventArgs e)
     {
         if (Vm?.SelectedFolder == null) return;

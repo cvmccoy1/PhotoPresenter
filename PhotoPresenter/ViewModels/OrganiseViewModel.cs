@@ -224,6 +224,28 @@ public partial class OrganiseViewModel : ObservableObject
             SaveAllPhotoOrder(SelectedFolder);
     }
 
+    public void SortFoldersByName()
+    {
+        var prevSelected = SelectedFolder;
+
+        var activeSorted  = Folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var removedSorted = _allFolderItems.Where(f => f.IsRemoved)
+                                           .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+        Folders.Clear();
+        _allFolderItems.Clear();
+
+        foreach (var f in activeSorted)  { Folders.Add(f); _allFolderItems.Add(f); }
+        foreach (var f in removedSorted)   _allFolderItems.Add(f);
+
+        SaveAllFolderOrder();
+        OnPropertyChanged(nameof(FolderCountLabel));
+
+        SelectedFolder = (prevSelected != null && Folders.Contains(prevSelected))
+            ? prevSelected
+            : Folders.FirstOrDefault();
+    }
+
     public async Task SortPhotosByDateAsync()
     {
         if (SelectedFolder == null) return;
