@@ -9,8 +9,10 @@ A Windows WPF application for presenting family photo and video collections on a
 - Drag and drop subfolders to set a custom presentation order
 - Select a subfolder and drag and drop its items to reorder them
 - Video files appear with a play-button thumbnail; the footer shows item counts as **x Items (y Photos, z Videos)**
+- The Folders pane footer shows the aggregate photo, video, and total counts across all visible folders
 - Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
+- Hover over a folder to see a tooltip showing the number of photos, videos, and total items in that folder
 - Right-click any photo or video and choose **Open** to open it in its default app, or **Open With…** to choose another app; double-clicking a tile does the same as **Open**
 - Hover over any photo or video tile to see a tooltip showing its type, date, dimensions (photos) or length (videos), and file size
 - Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**
