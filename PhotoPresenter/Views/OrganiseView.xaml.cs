@@ -43,9 +43,11 @@ public partial class OrganiseView : UserControl
 
     private void FolderList_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && Vm?.SelectedFolder != null)
+        if (e.Key == Key.Delete && Vm != null)
         {
-            Vm.RemoveFolder(Vm.SelectedFolder);
+            foreach (var folder in FolderList.SelectedItems.OfType<PhotoFolderViewModel>()
+                .Where(f => !f.IsRemoved).ToList())
+                Vm.RemoveFolder(folder);
             e.Handled = true;
         }
     }
@@ -114,23 +116,27 @@ public partial class OrganiseView : UserControl
 
     private void FolderRemove_Click(object sender, RoutedEventArgs e)
     {
-        var folder = ContextMenuTarget<PhotoFolderViewModel>(sender);
-        if (folder != null) Vm?.RemoveFolder(folder);
+        if (Vm == null) return;
+        foreach (var f in SelectedTargets<PhotoFolderViewModel>(FolderList, sender).Where(f => !f.IsRemoved))
+            Vm.RemoveFolder(f);
     }
 
     private void FolderRestore_Click(object sender, RoutedEventArgs e)
     {
-        var folder = ContextMenuTarget<PhotoFolderViewModel>(sender);
-        if (folder != null) Vm?.RestoreFolder(folder);
+        if (Vm == null) return;
+        foreach (var f in SelectedTargets<PhotoFolderViewModel>(FolderList, sender).Where(f => f.IsRemoved))
+            Vm.RestoreFolder(f);
     }
 
     // ── Photo list ─────────────────────────────────────────────────────────────
 
     private void PhotoList_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && PhotoList.SelectedItem is PhotoItemViewModel photo)
+        if (e.Key == Key.Delete && Vm != null)
         {
-            Vm?.RemovePhoto(photo);
+            foreach (var photo in PhotoList.SelectedItems.OfType<PhotoItemViewModel>()
+                .Where(p => !p.IsRemoved).ToList())
+                Vm.RemovePhoto(photo);
             e.Handled = true;
         }
     }
@@ -218,14 +224,16 @@ public partial class OrganiseView : UserControl
 
     private void PhotoRemove_Click(object sender, RoutedEventArgs e)
     {
-        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
-        if (photo != null) Vm?.RemovePhoto(photo);
+        if (Vm == null) return;
+        foreach (var p in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => !p.IsRemoved))
+            Vm.RemovePhoto(p);
     }
 
     private void PhotoRestore_Click(object sender, RoutedEventArgs e)
     {
-        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
-        if (photo != null) Vm?.RestorePhoto(photo);
+        if (Vm == null) return;
+        foreach (var p in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.IsRemoved))
+            Vm.RestorePhoto(p);
     }
 
     private void PhotoTile_MouseEnter(object sender, MouseEventArgs e)
@@ -376,5 +384,16 @@ public partial class OrganiseView : UserControl
         if (menuItemSender is MenuItem { Parent: ContextMenu { PlacementTarget: FrameworkElement fe } })
             return fe.DataContext as T;
         return null;
+    }
+
+    // If the right-clicked item is in the current selection, return all selected items of type T.
+    // Otherwise return just the right-clicked item, so single-item right-click always works.
+    private static List<T> SelectedTargets<T>(ListBox listBox, object menuItemSender) where T : class
+    {
+        var target = ContextMenuTarget<T>(menuItemSender);
+        if (target == null) return new();
+        return listBox.SelectedItems.Contains(target)
+            ? listBox.SelectedItems.OfType<T>().ToList()
+            : new List<T> { target };
     }
 }
