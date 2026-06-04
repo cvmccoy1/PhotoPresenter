@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Windows.Storage;
+using Windows.Storage.FileProperties;
 
 namespace PhotoPresenter.ViewModels;
 
@@ -154,7 +156,7 @@ public partial class PresentViewModel : ObservableObject
             CurrentIsVideo = true;
             IsPlaying = false;
             PositionLabel = "";
-            VideoRotation = 0;
+            VideoRotation = await GetVideoRotationAsync(photo.FullPath);
             CurrentCaption = photo.Caption;
             CurrentVideoPath = photo.FullPath;
             UpdateLabels();
@@ -200,6 +202,23 @@ public partial class PresentViewModel : ObservableObject
         {
             if (seq == _loadSequence) CurrentImage = null;
         }
+    }
+
+    private static async Task<double> GetVideoRotationAsync(string path)
+    {
+        try
+        {
+            var file = await StorageFile.GetFileFromPathAsync(path);
+            var props = await file.Properties.GetVideoPropertiesAsync();
+            return props.Orientation switch
+            {
+                VideoOrientation.Rotate90  => 90,
+                VideoOrientation.Rotate180 => 180,
+                VideoOrientation.Rotate270 => 270,
+                _                          => 0
+            };
+        }
+        catch { return 0; }
     }
 
     private async Task PreloadNextAsync()
