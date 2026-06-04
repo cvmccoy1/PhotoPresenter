@@ -119,12 +119,28 @@ public partial class OrganiseViewModel : ObservableObject
 
     // ── Folder operations ──────────────────────────────────────────────────────
 
-    public void ReorderFolder(int from, int to)
+    public void ReorderFolders(List<PhotoFolderViewModel> items, int slot)
     {
-        var item = Folders[from];
-        Folders.Move(from, to);
-        // Active items occupy the first Folders.Count slots in _allFolderItems.
-        _allFolderItems.Move(_allFolderItems.IndexOf(item), to);
+        var present = items.Where(f => Folders.Contains(f)).ToList();
+        if (present.Count == 0) return;
+
+        // Adjust the insertion slot for items that will be removed ahead of it.
+        int adjustedSlot = slot - present.Count(f => Folders.IndexOf(f) < slot);
+        adjustedSlot = Math.Clamp(adjustedSlot, 0, Folders.Count - present.Count);
+
+        // Remove from highest index first so lower indices stay valid.
+        foreach (var f in present.OrderByDescending(f => Folders.IndexOf(f)))
+        {
+            _allFolderItems.Remove(f);
+            Folders.Remove(f);
+        }
+
+        for (int i = 0; i < present.Count; i++)
+        {
+            Folders.Insert(adjustedSlot + i, present[i]);
+            _allFolderItems.Insert(adjustedSlot + i, present[i]);
+        }
+
         SaveAllFolderOrder();
     }
 
@@ -152,14 +168,28 @@ public partial class OrganiseViewModel : ObservableObject
 
     // ── Photo operations ───────────────────────────────────────────────────────
 
-    public void ReorderPhoto(int from, int to)
+    public void ReorderPhotos(List<PhotoItemViewModel> items, int slot)
     {
         if (SelectedFolder == null) return;
         var folder = SelectedFolder;
-        var item = folder.Photos[from];
-        folder.Photos.Move(from, to);
-        // Active items occupy the first Photos.Count slots in AllPhotoItems.
-        folder.AllPhotoItems.Move(folder.AllPhotoItems.IndexOf(item), to);
+        var present = items.Where(p => folder.Photos.Contains(p)).ToList();
+        if (present.Count == 0) return;
+
+        int adjustedSlot = slot - present.Count(p => folder.Photos.IndexOf(p) < slot);
+        adjustedSlot = Math.Clamp(adjustedSlot, 0, folder.Photos.Count - present.Count);
+
+        foreach (var p in present.OrderByDescending(p => folder.Photos.IndexOf(p)))
+        {
+            folder.AllPhotoItems.Remove(p);
+            folder.Photos.Remove(p);
+        }
+
+        for (int i = 0; i < present.Count; i++)
+        {
+            folder.Photos.Insert(adjustedSlot + i, present[i]);
+            folder.AllPhotoItems.Insert(adjustedSlot + i, present[i]);
+        }
+
         SaveAllPhotoOrder(folder);
     }
 

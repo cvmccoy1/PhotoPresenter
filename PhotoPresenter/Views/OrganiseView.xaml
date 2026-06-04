@@ -55,6 +55,7 @@
                         <StackPanel Orientation="Horizontal">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
+                                    <EventSetter Event="ContextMenuOpening" Handler="FolderTile_ContextMenuOpening"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsRemoved}" Value="True">
                                             <Setter Property="Opacity" Value="0.4"/>
@@ -69,7 +70,7 @@
                             </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Remove from Presentation" Click="FolderRemove_Click">
+                                    <MenuItem Header="Remove from Presentation" Tag="FolderRemove" Click="FolderRemove_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Style.Triggers>
@@ -80,7 +81,7 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
-                                    <MenuItem Header="Add to Presentation" Click="FolderRestore_Click">
+                                    <MenuItem Header="Add to Presentation" Tag="FolderRestore" Click="FolderRestore_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -172,6 +173,7 @@
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
                                     <EventSetter Event="MouseEnter" Handler="PhotoTile_MouseEnter"/>
+                                    <EventSetter Event="ContextMenuOpening" Handler="PhotoTile_ContextMenuOpening"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsRemoved}" Value="True">
                                             <Setter Property="Opacity" Value="0.4"/>
@@ -186,10 +188,10 @@
                             </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Open" Click="PhotoOpen_Click"/>
-                                    <MenuItem Header="Open With…" Click="PhotoOpenWith_Click"/>
+                                    <MenuItem Header="Open" Tag="Open" Click="PhotoOpen_Click"/>
+                                    <MenuItem Header="Open With…" Tag="OpenWith" Click="PhotoOpenWith_Click"/>
                                     <Separator/>
-                                    <MenuItem Header="Remove from Presentation" Click="PhotoRemove_Click">
+                                    <MenuItem Header="Remove from Presentation" Tag="Remove" Click="PhotoRemove_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Style.Triggers>
@@ -200,7 +202,7 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
-                                    <MenuItem Header="Add to Presentation" Click="PhotoRestore_Click">
+                                    <MenuItem Header="Add to Presentation" Tag="Restore" Click="PhotoRestore_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -213,7 +215,14 @@
                                         </MenuItem.Style>
                                     </MenuItem>
                                     <Separator/>
-                                    <MenuItem Header="Add Caption" Click="PhotoCaptionAdd_Click">
+                                    <MenuItem Header="Set Caption" Tag="SetCaption" Click="PhotoCaptionSet_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="Add Caption" Tag="AddCaption" Click="PhotoCaptionAdd_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Style.Triggers>
@@ -224,7 +233,7 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
-                                    <MenuItem Header="Edit Caption" Click="PhotoCaptionEdit_Click">
+                                    <MenuItem Header="Edit Caption" Tag="EditCaption" Click="PhotoCaptionEdit_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -236,7 +245,7 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
-                                    <MenuItem Header="Delete Caption" Click="PhotoCaptionDelete_Click">
+                                    <MenuItem Header="Delete Caption" Tag="DeleteCaption" Click="PhotoCaptionDelete_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
                                                 <Setter Property="Visibility" Value="Collapsed"/>

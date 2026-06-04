@@ -66,18 +66,23 @@ public partial class OrganiseView : UserControl
         var item = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
         if (item != null)
         {
+            var dragList = FolderList.SelectedItems.Contains(item) && FolderList.SelectedItems.Count > 1
+                ? FolderList.SelectedItems.OfType<PhotoFolderViewModel>()
+                    .OrderBy(f => Vm!.Folders.IndexOf(f))
+                    .ToList()
+                : new List<PhotoFolderViewModel> { item };
+
             FolderList.QueryContinueDrag += CancelDragOnEscape;
-            DragDrop.DoDragDrop(FolderList, item, DragDropEffects.Move);
+            DragDrop.DoDragDrop(FolderList, dragList, DragDropEffects.Move);
             FolderList.QueryContinueDrag -= CancelDragOnEscape;
             RemoveAdorner();
-            // Reset start point so a still-held button doesn't immediately re-trigger a drag.
             _dragStartPoint = Mouse.GetPosition(null);
         }
     }
 
     private void FolderList_DragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(typeof(PhotoFolderViewModel)))
+        if (!e.Data.GetDataPresent(typeof(List<PhotoFolderViewModel>)))
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -100,18 +105,16 @@ public partial class OrganiseView : UserControl
     private void FolderList_Drop(object sender, DragEventArgs e)
     {
         RemoveAdorner();
-        if (!e.Data.GetDataPresent(typeof(PhotoFolderViewModel))) return;
-        var dragging = (PhotoFolderViewModel)e.Data.GetData(typeof(PhotoFolderViewModel));
+        if (!e.Data.GetDataPresent(typeof(List<PhotoFolderViewModel>))) return;
+        var dragging = (List<PhotoFolderViewModel>)e.Data.GetData(typeof(List<PhotoFolderViewModel>));
+        if (Vm == null || dragging.Count == 0) return;
 
-        int from = Vm?.Folders.IndexOf(dragging) ?? -1;
-        if (from < 0 || Vm == null) return;
+        // Do nothing if the cursor is over one of the items being dragged.
+        var itemUnderCursor = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
+        if (itemUnderCursor != null && dragging.Contains(itemUnderCursor)) return;
 
-        // GetDropSlot returns an insertion slot (0..Count). Convert to a Move index:
-        // moving down shifts earlier indices after removal, so subtract 1 when slot > from.
         int slot = GetDropSlot(FolderList, e.GetPosition(FolderList));
-        int to   = slot > from ? slot - 1 : slot;
-        if (from != to)
-            Vm.ReorderFolder(from, to);
+        Vm.ReorderFolders(dragging, slot);
     }
 
     private void FolderRemove_Click(object sender, RoutedEventArgs e)
@@ -126,6 +129,23 @@ public partial class OrganiseView : UserControl
         if (Vm == null) return;
         foreach (var f in SelectedTargets<PhotoFolderViewModel>(FolderList, sender).Where(f => f.IsRemoved))
             Vm.RestoreFolder(f);
+    }
+
+    private void FolderTile_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.ContextMenu is not ContextMenu cm) return;
+
+        foreach (var mi in cm.Items.OfType<MenuItem>())
+            mi.ClearValue(VisibilityProperty);
+
+        var clicked = fe.DataContext as PhotoFolderViewModel;
+        var selected = FolderList.SelectedItems.OfType<PhotoFolderViewModel>().ToList();
+        if (clicked == null || !selected.Contains(clicked) || selected.Count <= 1) return;
+
+        bool anyVisible = selected.Any(f => !f.IsRemoved);
+        bool anyHidden  = selected.Any(f =>  f.IsRemoved);
+        SetMenuItemVisibility(cm, "FolderRemove",  anyVisible ? Visibility.Visible : Visibility.Collapsed);
+        SetMenuItemVisibility(cm, "FolderRestore", anyHidden  ? Visibility.Visible : Visibility.Collapsed);
     }
 
     // ── Photo list ─────────────────────────────────────────────────────────────
@@ -155,8 +175,16 @@ public partial class OrganiseView : UserControl
         var item = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
         if (item != null)
         {
+            var photos = Vm?.Photos;
+            var dragList = (photos != null && PhotoList.SelectedItems.Contains(item) && PhotoList.SelectedItems.Count > 1)
+                ? PhotoList.SelectedItems.OfType<PhotoItemViewModel>()
+                    .Where(p => photos.Contains(p))
+                    .OrderBy(p => photos.IndexOf(p))
+                    .ToList()
+                : new List<PhotoItemViewModel> { item };
+
             PhotoList.QueryContinueDrag += CancelDragOnEscape;
-            DragDrop.DoDragDrop(PhotoList, item, DragDropEffects.Move);
+            DragDrop.DoDragDrop(PhotoList, dragList, DragDropEffects.Move);
             PhotoList.QueryContinueDrag -= CancelDragOnEscape;
             RemoveAdorner();
             _dragStartPoint = Mouse.GetPosition(null);
@@ -165,7 +193,7 @@ public partial class OrganiseView : UserControl
 
     private void PhotoList_DragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(typeof(PhotoItemViewModel)))
+        if (!e.Data.GetDataPresent(typeof(List<PhotoItemViewModel>)))
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -188,25 +216,26 @@ public partial class OrganiseView : UserControl
     private void PhotoList_Drop(object sender, DragEventArgs e)
     {
         RemoveAdorner();
-        if (!e.Data.GetDataPresent(typeof(PhotoItemViewModel))) return;
-        var dragging = (PhotoItemViewModel)e.Data.GetData(typeof(PhotoItemViewModel));
+        if (!e.Data.GetDataPresent(typeof(List<PhotoItemViewModel>))) return;
+        var dragging = (List<PhotoItemViewModel>)e.Data.GetData(typeof(List<PhotoItemViewModel>));
+        if (Vm == null || dragging.Count == 0) return;
+
         var target = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
-        if (target == null || Vm == null) return;
+        if (target == null) return;
+
+        // Do nothing if the cursor is over one of the items being dragged.
+        if (dragging.Contains(target)) return;
 
         var photos = Vm.Photos;
         if (photos == null) return;
-        int from = photos.IndexOf(dragging);
         int targetIndex = photos.IndexOf(target);
-        if (from < 0 || targetIndex < 0) return;
+        if (targetIndex < 0) return;
 
-        // Left half of target = insert before it; right half = insert after it.
         var container = PhotoList.ItemContainerGenerator.ContainerFromIndex(targetIndex) as ListBoxItem;
         bool insertBefore = container == null || e.GetPosition(container).X < container.ActualWidth / 2;
         int slot = insertBefore ? targetIndex : targetIndex + 1;
 
-        int to = slot > from ? slot - 1 : slot;
-        if (from != to)
-            Vm.ReorderPhoto(from, to);
+        Vm.ReorderPhotos(dragging, slot);
     }
 
     private async void SortByDate_Click(object sender, RoutedEventArgs e)
@@ -234,6 +263,50 @@ public partial class OrganiseView : UserControl
         if (Vm == null) return;
         foreach (var p in SelectedTargets<PhotoItemViewModel>(PhotoList, sender).Where(p => p.IsRemoved))
             Vm.RestorePhoto(p);
+    }
+
+    private void PhotoTile_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.ContextMenu is not ContextMenu cm) return;
+
+        foreach (var mi in cm.Items.OfType<MenuItem>())
+        {
+            mi.ClearValue(VisibilityProperty);
+            mi.ClearValue(IsEnabledProperty);
+        }
+
+        var clicked = fe.DataContext as PhotoItemViewModel;
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
+        if (clicked == null || !selected.Contains(clicked) || selected.Count <= 1) return;
+
+        // Open / Open With — disabled for multi-selection.
+        SetMenuItemEnabled(cm, "Open",     false);
+        SetMenuItemEnabled(cm, "OpenWith", false);
+
+        // Remove / Restore — based on whether any are visible or hidden.
+        bool anyVisible = selected.Any(p => !p.IsRemoved);
+        bool anyHidden  = selected.Any(p =>  p.IsRemoved);
+        SetMenuItemVisibility(cm, "Remove",  anyVisible ? Visibility.Visible : Visibility.Collapsed);
+        SetMenuItemVisibility(cm, "Restore", anyHidden  ? Visibility.Visible : Visibility.Collapsed);
+
+        // Caption — replace Add/Edit with a single "Set Caption"; show Delete if any have one.
+        SetMenuItemVisibility(cm, "SetCaption",   Visibility.Visible);
+        SetMenuItemVisibility(cm, "AddCaption",   Visibility.Collapsed);
+        SetMenuItemVisibility(cm, "EditCaption",  Visibility.Collapsed);
+        bool anyHasCaption = selected.Any(p => p.HasCaption);
+        SetMenuItemVisibility(cm, "DeleteCaption", anyHasCaption ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    private void PhotoCaptionSet_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
+        if (selected.Count == 0) return;
+        var existing = selected.FirstOrDefault(p => p.HasCaption)?.Caption ?? "";
+        var dlg = new CaptionDialog(existing) { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() == true)
+            foreach (var photo in selected)
+                Vm.SetCaption(photo, dlg.Caption);
     }
 
     private void PhotoTile_MouseEnter(object sender, MouseEventArgs e)
@@ -395,5 +468,20 @@ public partial class OrganiseView : UserControl
         return listBox.SelectedItems.Contains(target)
             ? listBox.SelectedItems.OfType<T>().ToList()
             : new List<T> { target };
+    }
+
+    private static MenuItem? FindMenuItem(ContextMenu cm, string tag) =>
+        cm.Items.OfType<MenuItem>().FirstOrDefault(mi => mi.Tag as string == tag);
+
+    private static void SetMenuItemVisibility(ContextMenu cm, string tag, Visibility v)
+    {
+        var mi = FindMenuItem(cm, tag);
+        if (mi != null) mi.Visibility = v;
+    }
+
+    private static void SetMenuItemEnabled(ContextMenu cm, string tag, bool enabled)
+    {
+        var mi = FindMenuItem(cm, tag);
+        if (mi != null) mi.IsEnabled = enabled;
     }
 }
