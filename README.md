@@ -9,7 +9,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - Drag and drop subfolders to set a custom presentation order
 - Select a subfolder and drag and drop its items to reorder them
 - Video files appear with a play-button thumbnail; the footer shows item counts as **x Items (y Photos, z Videos)**
-- The Folders pane footer shows the aggregate photo, video, and total counts across all visible folders
+- The Folders pane footer shows the folder count and aggregate photo, video, and total counts across all visible folders on a single line (e.g. **5 folders · 48 Photos, 7 Videos, 55 Total**)
 - Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
 - Hover over a folder to see a tooltip showing the number of photos, videos, and total items in that folder
@@ -20,7 +20,7 @@ A Windows WPF application for presenting family photo and video collections on a
   - The caption is overlaid at the bottom of the screen in Present mode
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - Click a folder (and optionally an item) before switching to Present mode to start from that point
-- Window size and position are remembered between sessions
+- Window size, position, and the splitter position between the Folders and Photos/Videos panes are all remembered between sessions
 
 ### Present Mode
 - Fullscreen display on your TV or monitor
