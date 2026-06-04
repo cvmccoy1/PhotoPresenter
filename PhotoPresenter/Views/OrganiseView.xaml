@@ -146,7 +146,8 @@
                      PreviewMouseMove="PhotoList_PreviewMouseMove"
                      DragOver="PhotoList_DragOver"
                      DragLeave="PhotoList_DragLeave"
-                     Drop="PhotoList_Drop">
+                     Drop="PhotoList_Drop"
+                     MouseDoubleClick="PhotoList_MouseDoubleClick">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal" Margin="4"/>
@@ -163,6 +164,7 @@
                         <StackPanel Width="154">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
+                                    <EventSetter Event="MouseEnter" Handler="PhotoTile_MouseEnter"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsRemoved}" Value="True">
                                             <Setter Property="Opacity" Value="0.4"/>
@@ -170,8 +172,16 @@
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
+                            <StackPanel.ToolTip>
+                                <ToolTip DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <TextBlock Text="{Binding ToolTipText}" FontFamily="Segoe UI" FontSize="11" LineHeight="18"/>
+                                </ToolTip>
+                            </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Open" Click="PhotoOpen_Click"/>
+                                    <MenuItem Header="Open With…" Click="PhotoOpenWith_Click"/>
+                                    <Separator/>
                                     <MenuItem Header="Remove from Presentation" Click="PhotoRemove_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">

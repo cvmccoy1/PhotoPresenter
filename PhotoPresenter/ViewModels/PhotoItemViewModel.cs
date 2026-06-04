@@ -22,10 +22,14 @@ public partial class PhotoItemViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasCaption))]
     private string _caption = "";
 
+    [ObservableProperty] private string _toolTipText = "";
+
     public bool HasCaption => !string.IsNullOrEmpty(Caption);
 
     partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
     partial void OnCaptionChanged(string value)  => Model.Caption  = value;
+
+    private bool _toolTipLoaded;
 
     public PhotoItemViewModel(PhotoItem model)
     {
@@ -33,6 +37,79 @@ public partial class PhotoItemViewModel : ObservableObject
         _isRemoved = model.IsRemoved;
         _caption   = model.Caption;
         _ = LoadThumbnailAsync();
+    }
+
+    public void EnsureToolTipLoaded()
+    {
+        if (_toolTipLoaded) return;
+        _toolTipLoaded = true;
+
+        var fi = new FileInfo(Model.FullPath);
+        string ext  = Path.GetExtension(Model.FileName).ToUpperInvariant();
+        string date = Model.CreationDate == default ? "Unknown" : Model.CreationDate.ToString("yyyy-MM-dd h:mm tt");
+        string size = FormatSize(fi.Exists ? fi.Length : 0);
+        string detail = IsVideo ? "Length: …" : "Dimensions: …";
+
+        ToolTipText = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+
+        _ = LoadToolTipDetailAsync(fi);
+    }
+
+    private async Task LoadToolTipDetailAsync(FileInfo fi)
+    {
+        string detail;
+        if (IsVideo)
+        {
+            string dur = await Task.Run(() => GetVideoDuration(Model.FullPath));
+            detail = $"Length: {dur}";
+        }
+        else
+        {
+            string dims = await Task.Run(() => GetPhotoDimensions(Model.FullPath));
+            detail = $"Dimensions: {dims}";
+        }
+
+        string ext  = Path.GetExtension(Model.FileName).ToUpperInvariant();
+        string date = Model.CreationDate == default ? "Unknown" : Model.CreationDate.ToString("yyyy-MM-dd h:mm tt");
+        string size = FormatSize(fi.Exists ? fi.Length : 0);
+        ToolTipText = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+    }
+
+    private static string GetPhotoDimensions(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var decoder = BitmapDecoder.Create(stream,
+                BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile,
+                BitmapCacheOption.OnDemand);
+            var frame = decoder.Frames[0];
+            return $"{frame.PixelWidth} × {frame.PixelHeight}";
+        }
+        catch { return "Unknown"; }
+    }
+
+    private static string GetVideoDuration(string path)
+    {
+        try
+        {
+            var shellType = Type.GetTypeFromProgID("Shell.Application");
+            if (shellType == null) return "Unknown";
+            dynamic shell  = Activator.CreateInstance(shellType)!;
+            dynamic folder = shell.NameSpace(System.IO.Path.GetDirectoryName(path));
+            dynamic item   = folder.ParseName(System.IO.Path.GetFileName(path));
+            string dur = folder.GetDetailsOf(item, 27); // column 27 = Duration
+            return string.IsNullOrWhiteSpace(dur) ? "Unknown" : dur.Trim();
+        }
+        catch { return "Unknown"; }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes <= 0) return "Unknown";
+        if (bytes >= 1_073_741_824L)
+            return $"{bytes / 1_073_741_824.0:F2} GB";
+        return $"{bytes / 1_048_576.0:F1} MB";
     }
 
     private async Task LoadThumbnailAsync()

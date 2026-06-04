@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -205,6 +206,12 @@ public partial class OrganiseView : UserControl
         if (photo != null) Vm?.RestorePhoto(photo);
     }
 
+    private void PhotoTile_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: PhotoItemViewModel photo })
+            photo.EnsureToolTipLoaded();
+    }
+
     private void PhotoCaptionAdd_Click(object sender, RoutedEventArgs e)
     {
         var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
@@ -228,6 +235,49 @@ public partial class OrganiseView : UserControl
         var dlg = new CaptionDialog(photo.Caption) { Owner = Window.GetWindow(this) };
         if (dlg.ShowDialog() == true)
             Vm?.SetCaption(photo, dlg.Caption);
+    }
+
+    // ── Open / Open With ──────────────────────────────────────────────────────
+
+    private void PhotoOpen_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) OpenFile(photo.FullPath);
+    }
+
+    private void PhotoOpenWith_Click(object sender, RoutedEventArgs e)
+    {
+        var photo = ContextMenuTarget<PhotoItemViewModel>(sender);
+        if (photo != null) ShowOpenWithDialog(photo.FullPath);
+    }
+
+    private void PhotoList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        var photo = HitTestItem<PhotoItemViewModel>(PhotoList, e.GetPosition(PhotoList));
+        if (photo != null) OpenFile(photo.FullPath);
+    }
+
+    private static void OpenFile(string path)
+    {
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch { }
+    }
+
+    private static void ShowOpenWithDialog(string filePath)
+    {
+        try
+        {
+            var openWith = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "openwith.exe");
+            Process.Start(new ProcessStartInfo
+            {
+                FileName        = openWith,
+                Arguments       = $"\"{filePath}\"",
+                UseShellExecute = false
+            });
+        }
+        catch { }
     }
 
     // ── Insertion adorner ──────────────────────────────────────────────────────
