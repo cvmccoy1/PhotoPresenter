@@ -146,22 +146,87 @@ public partial class PhotoItemViewModel : ObservableObject
 
     internal static BitmapSource LoadBitmap(string path, int decodeWidth)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-
         var ext = Path.GetExtension(path);
         if (ext.Equals(".heic", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".heif", StringComparison.OrdinalIgnoreCase))
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             return LoadViaDecoder(stream, decodeWidth);
+        }
 
+        int orientation = ReadExifOrientation(path);
+
+        using var imgStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var bmp = new BitmapImage();
         bmp.BeginInit();
-        bmp.StreamSource = stream;
-        bmp.CacheOption  = BitmapCacheOption.OnLoad;
+        bmp.StreamSource  = imgStream;
+        bmp.CacheOption   = BitmapCacheOption.OnLoad;
         bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
         if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
         bmp.EndInit();
         bmp.Freeze();
-        return bmp;
+
+        return ApplyExifOrientation(bmp, orientation);
+    }
+
+    private static int ReadExifOrientation(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var decoder = BitmapDecoder.Create(stream,
+                BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile,
+                BitmapCacheOption.OnDemand);
+            return ReadOrientationFromMetadata(decoder.Frames[0].Metadata as BitmapMetadata);
+        }
+        catch { return 1; }
+    }
+
+    private static int ReadOrientationFromMetadata(BitmapMetadata? metadata)
+    {
+        if (metadata == null) return 1;
+        try
+        {
+            var val = metadata.GetQuery("/app1/ifd/{ushort=274}")
+                      ?? metadata.GetQuery("/xmp/exif:Orientation");
+            return val switch
+            {
+                ushort u => (int)u,
+                string s when int.TryParse(s, out var p) => p,
+                _ => 1
+            };
+        }
+        catch { return 1; }
+    }
+
+    private static BitmapSource ApplyExifOrientation(BitmapSource source, int orientation)
+    {
+        if (orientation <= 1 || orientation > 8) return source;
+
+        // Orientations 5 and 7 require two transforms (rotate + horizontal flip).
+        if (orientation is 5 or 7)
+        {
+            var rotated = new TransformedBitmap(source, new RotateTransform(orientation == 5 ? 90 : 270));
+            rotated.Freeze();
+            var flipped = new TransformedBitmap(rotated, new ScaleTransform(-1, 1));
+            flipped.Freeze();
+            return flipped;
+        }
+
+        Transform t = orientation switch
+        {
+            2 => new ScaleTransform(-1, 1),
+            3 => new RotateTransform(180),
+            4 => new ScaleTransform(1, -1),
+            6 => new RotateTransform(90),
+            8 => new RotateTransform(270),
+            _ => null!
+        };
+
+        if (t == null) return source;
+        var tb = new TransformedBitmap(source, t);
+        tb.Freeze();
+        return tb;
     }
 
     private static BitmapSource LoadViaDecoder(Stream stream, int decodeWidth)
@@ -170,16 +235,21 @@ public partial class PhotoItemViewModel : ObservableObject
             BitmapCreateOptions.IgnoreColorProfile,
             BitmapCacheOption.OnLoad);
         var frame = decoder.Frames[0];
+        int orientation = ReadOrientationFromMetadata(frame.Metadata as BitmapMetadata);
 
+        BitmapSource result = frame;
         if (decodeWidth > 0 && frame.PixelWidth > decodeWidth)
         {
             double scale = (double)decodeWidth / frame.PixelWidth;
             var scaled = new TransformedBitmap(frame, new ScaleTransform(scale, scale));
             scaled.Freeze();
-            return scaled;
+            result = scaled;
+        }
+        else
+        {
+            frame.Freeze();
         }
 
-        frame.Freeze();
-        return frame;
+        return ApplyExifOrientation(result, orientation);
     }
 }
