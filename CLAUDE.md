@@ -63,6 +63,10 @@ Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Pres
 
 `PresentViewModel.LoadCurrentPhotoAsync()` calls `GetVideoRotationAsync(path)` before setting `CurrentVideoPath`. This reads `Windows.Storage.FileProperties.VideoProperties.Orientation` (WinRT) and maps it to 0/90/180/270 degrees, which is assigned to `VideoRotation` (bound to the `MediaElement`'s `RotateTransform`). Falls back to 0 on any error. The manual ↻ 90° button adds to the auto-detected value. The TFM `net8.0-windows10.0.19041.0` is required for the WinRT API — do not lower it.
 
+### Photo EXIF orientation
+
+WPF's `BitmapImage` silently ignores the EXIF orientation tag (0x0112), so `PhotoItemViewModel.LoadBitmap` applies it manually. For non-HEIC formats, `ReadExifOrientation` opens the file with `BitmapDecoder.Create` + `DelayCreation`/`OnDemand` (header-only read), queries `/app1/ifd/{ushort=274}` then `/xmp/exif:Orientation` as a fallback, and returns the integer value. `ApplyExifOrientation` then wraps the decoded `BitmapSource` in one or two `TransformedBitmap` steps — orientations 2–4/6/8 need a single `ScaleTransform` or `RotateTransform`; orientations 5 and 7 need a `RotateTransform` followed by a horizontal `ScaleTransform(-1,1)`. For HEIC/HEIF, orientation is read directly from `frame.Metadata` inside `LoadViaDecoder` (which already uses `BitmapDecoder`). The thumbnail cache stores the already-corrected bitmap, so the orientation read adds one extra file-open only on the first visit per file.
+
 ### Async image loading
 
 `BitmapImage` is always created on a background `Task.Run`, `Freeze()`d, then assigned on the UI thread. Thumbnails use `DecodePixelWidth` (80px for folder cards, 150px for photo tiles). `PresentViewModel` preloads the next photo after each display. A monotonic `_loadSequence` counter guards against stale async results when the user navigates quickly.
