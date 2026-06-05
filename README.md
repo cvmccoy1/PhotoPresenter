@@ -25,6 +25,7 @@ A Windows WPF application for presenting family photo and video collections on a
   - The caption appears in italic below the thumbnail in Organise mode
   - The caption is overlaid at the bottom of the screen in Present mode
 - **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, and caption changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
+- Thumbnails load on demand: folder-card thumbnails (left pane) load immediately on launch; photo thumbnails load when you click a folder, keeping startup fast even with thousands of files; decoded thumbnails are cached in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` so subsequent visits are near-instant
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - Click a folder (and optionally an item) before switching to Present mode to start from that point
 - Window size, position, and the splitter position between the Folders and Photos/Videos panes are all remembered between sessions

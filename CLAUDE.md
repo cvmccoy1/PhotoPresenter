@@ -61,6 +61,10 @@ Handled in `MainWindow.Window_PreviewKeyDown`: `Right`/`Space` = next, `Left` = 
 
 `BitmapImage` is always created on a background `Task.Run`, `Freeze()`d, then assigned on the UI thread. Thumbnails use `DecodePixelWidth` (80px for folder cards, 150px for photo tiles). `PresentViewModel` preloads the next photo after each display. A monotonic `_loadSequence` counter guards against stale async results when the user navigates quickly.
 
+### Thumbnail concurrency and caching
+
+`PhotoItemViewModel.ThumbSemaphore` is `SemaphoreSlim(ProcessorCount - 2, min 4)` — scales with the machine rather than a fixed 6. Photo thumbnails are **lazy**: `PhotoItemViewModel` constructor does not fire thumbnail loading; `EnsureThumbnailLoaded()` is called by `PhotoFolderViewModel.LoadPhotoThumbnails()`, which `OrganiseViewModel.OnSelectedFolderChanged` invokes when a folder is selected. Folder-card thumbnails (left pane, ~40 total) still load immediately on construction. `ThumbnailCache` (`Services/ThumbnailCache.cs`) stores decoded thumbnails as JPEG in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` keyed by `{MD5(fullPath)}_{lastWriteTimeTicks}.jpg`. Cache hits bypass the semaphore entirely. Folder card thumbnails use a `|80` suffix on the key to distinguish their 80 px version from the 150 px photo version of the same file. Stale entries (different ticks for the same path) and files older than 90 days are pruned at startup on a background thread.
+
 ### Drag-and-drop
 
 `OrganiseView.xaml.cs` implements WPF D&D for both lists (`PreviewMouseMove` → `DragDrop.DoDragDrop`; `Drop` → `OrganiseViewModel.ReorderFolders/ReorderPhotos`). The sidecar JSON is rewritten immediately after every reorder. Multi-selection drag uses a deferred-selection pattern: `PreviewMouseLeftButtonDown` suppresses the event (`e.Handled = true`) when clicking an already-selected item in a multi-selection, and `PreviewMouseLeftButtonUp` resolves it to a single selection only if no drag started.
