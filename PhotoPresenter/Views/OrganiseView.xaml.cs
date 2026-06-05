@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -185,7 +186,10 @@ public partial class OrganiseView : UserControl
         if (sender is not FrameworkElement fe || fe.ContextMenu is not ContextMenu cm) return;
 
         foreach (var mi in cm.Items.OfType<MenuItem>())
+        {
             mi.ClearValue(VisibilityProperty);
+            mi.ClearValue(IsEnabledProperty);
+        }
 
         var clicked = fe.DataContext as PhotoFolderViewModel;
         var selected = FolderList.SelectedItems.OfType<PhotoFolderViewModel>().ToList();
@@ -195,6 +199,7 @@ public partial class OrganiseView : UserControl
         bool anyHidden  = selected.Any(f =>  f.IsRemoved);
         SetMenuItemVisibility(cm, "FolderRemove",  anyVisible ? Visibility.Visible : Visibility.Collapsed);
         SetMenuItemVisibility(cm, "FolderRestore", anyHidden  ? Visibility.Visible : Visibility.Collapsed);
+        SetMenuItemEnabled(cm, "FolderOpenExplorer", false);
     }
 
     // ── Photo list ─────────────────────────────────────────────────────────────
@@ -437,6 +442,26 @@ public partial class OrganiseView : UserControl
             Vm?.SetCaption(photo, dlg.Caption);
     }
 
+    private void FolderOpenExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var folder = ContextMenuTarget<PhotoFolderViewModel>(sender);
+        if (folder != null) OpenFolderInExplorer(folder.FullPath);
+    }
+
+    private void PhotoOpenExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.SelectedFolder == null) return;
+        var folderPath = Vm.SelectedFolder.FullPath;
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>()
+                                              .Select(p => p.FullPath).ToList();
+        if (selected.Count == 0)
+            OpenFolderInExplorer(folderPath);
+        else if (selected.Count == 1)
+            OpenAndSelectSingle(selected[0]);
+        else
+            OpenFolderAndSelectItems(folderPath, selected);
+    }
+
     // ── Open / Open With ──────────────────────────────────────────────────────
 
     private void PhotoOpen_Click(object sender, RoutedEventArgs e)
@@ -499,6 +524,59 @@ public partial class OrganiseView : UserControl
         if (_adorner == null) return;
         AdornerLayer.GetAdornerLayer(_adorner.AdornedElement)?.Remove(_adorner);
         _adorner = null;
+    }
+
+    // ── Explorer helpers ───────────────────────────────────────────────────────
+
+    [DllImport("shell32.dll")]
+    private static extern int SHOpenFolderAndSelectItems(
+        IntPtr pidlFolder, uint cidl,
+        [In, MarshalAs(UnmanagedType.LPArray)] IntPtr[] apidl,
+        uint dwFlags);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint SHParseDisplayName(
+        string pszName, IntPtr pbc,
+        out IntPtr ppidl, uint sfgaoIn, out uint psfgaoOut);
+
+    [DllImport("ole32.dll")]
+    private static extern void CoTaskMemFree(IntPtr pv);
+
+    private static void OpenFolderInExplorer(string folderPath)
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folderPath}\"") { UseShellExecute = true }); }
+        catch { }
+    }
+
+    private static void OpenAndSelectSingle(string filePath)
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true }); }
+        catch { }
+    }
+
+    private static void OpenFolderAndSelectItems(string folderPath, List<string> filePaths)
+    {
+        IntPtr folderPidl = IntPtr.Zero;
+        var itemPidls = new List<IntPtr>();
+        try
+        {
+            SHParseDisplayName(folderPath, IntPtr.Zero, out folderPidl, 0, out _);
+            if (folderPidl == IntPtr.Zero) { OpenFolderInExplorer(folderPath); return; }
+
+            foreach (var path in filePaths)
+            {
+                SHParseDisplayName(path, IntPtr.Zero, out IntPtr pidl, 0, out _);
+                if (pidl != IntPtr.Zero) itemPidls.Add(pidl);
+            }
+
+            SHOpenFolderAndSelectItems(folderPidl, (uint)itemPidls.Count, itemPidls.ToArray(), 0);
+        }
+        catch { try { OpenFolderInExplorer(folderPath); } catch { } }
+        finally
+        {
+            if (folderPidl != IntPtr.Zero) CoTaskMemFree(folderPidl);
+            foreach (var pidl in itemPidls) CoTaskMemFree(pidl);
+        }
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

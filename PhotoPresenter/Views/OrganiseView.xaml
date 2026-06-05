@@ -100,6 +100,8 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Open Folder in Explorer" Tag="FolderOpenExplorer" Click="FolderOpenExplorer_Click"/>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
                             <Border Width="72" Height="54" Background="#DDD" ClipToBounds="True" Margin="0,0,8,0">
@@ -265,6 +267,8 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Open Folder in Explorer" Tag="PhotoOpenExplorer" Click="PhotoOpenExplorer_Click"/>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
                             <Border Width="154" Height="104" Background="Transparent" ClipToBounds="True">
