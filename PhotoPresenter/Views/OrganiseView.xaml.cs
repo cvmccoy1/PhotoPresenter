@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -6,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using PhotoPresenter.Services;
 using PhotoPresenter.ViewModels;
 
@@ -28,6 +30,9 @@ public partial class OrganiseView : UserControl
     private bool _folderDragCanStart;
     private bool _photoDragCanStart;
 
+    // Scroll offset to restore on first folder load; -1 means no restore pending.
+    private double _pendingScrollOffset = -1;
+
     public OrganiseView()
     {
         InitializeComponent();
@@ -38,9 +43,57 @@ public partial class OrganiseView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var pos = UserSettings.Load().SplitterPosition;
-        if (pos.HasValue && pos.Value >= FolderColumn.MinWidth)
-            FolderColumn.Width = new GridLength(pos.Value);
+        var settings = UserSettings.Load();
+
+        if (settings.SplitterPosition.HasValue && settings.SplitterPosition.Value >= FolderColumn.MinWidth)
+            FolderColumn.Width = new GridLength(settings.SplitterPosition.Value);
+
+        _pendingScrollOffset = settings.PhotoScrollOffset;
+
+        if (Window.GetWindow(this) is Window win)
+            win.Closing += OnWindowClosing;
+
+        if (DataContext is OrganiseViewModel vm)
+        {
+            vm.PropertyChanged += OnVmPropertyChanged;
+
+            // LoadAsync may have already completed before OnLoaded fired (small libraries).
+            if (vm.SelectedFolder != null)
+                ScheduleScrollRestore();
+        }
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(OrganiseViewModel.SelectedFolder))
+            ScheduleScrollRestore();
+    }
+
+    private void ScheduleScrollRestore()
+    {
+        if (_pendingScrollOffset < 0) return;
+        var offset = _pendingScrollOffset;
+        _pendingScrollOffset = -1;
+        Dispatcher.InvokeAsync(
+            () => GetPhotoScrollViewer()?.ScrollToVerticalOffset(offset),
+            DispatcherPriority.Background);
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        var sv = GetPhotoScrollViewer();
+        if (sv == null) return;
+        var settings = UserSettings.Load();
+        settings.PhotoScrollOffset = sv.VerticalOffset;
+        settings.Save();
+    }
+
+    private ScrollViewer? GetPhotoScrollViewer()
+    {
+        if (VisualTreeHelper.GetChildrenCount(PhotoList) == 0) return null;
+        var child0 = VisualTreeHelper.GetChild(PhotoList, 0);
+        if (VisualTreeHelper.GetChildrenCount(child0) == 0) return null;
+        return VisualTreeHelper.GetChild(child0, 0) as ScrollViewer;
     }
 
     private void OnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
