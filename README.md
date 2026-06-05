@@ -18,6 +18,8 @@ A Windows WPF application for presenting family photo and video collections on a
 - The Folders pane footer shows the folder count and aggregate photo, video, and total counts across all visible folders on a single line (e.g. **5 folders · 48 Photos, 7 Videos, 55 Total**)
 - Right-click a folder or item and choose **Remove from Presentation** to exclude it — the actual files are never touched; with a multi-selection, the menu adapts: **Remove from Presentation** appears if any selected items are visible, **Add to Presentation** if any are hidden, or both if mixed — each action applies only to the applicable items
 - Tick **Show All** in either pane to reveal removed items at reduced opacity; right-click a grayed item and choose **Add to Presentation** to restore it
+- Right-click a folder and choose **Open Folder in Explorer** to open that folder in Windows File Explorer; the option is greyed out when multiple folders are selected
+- Right-click any photo or video and choose **Open Folder in Explorer** to open its containing folder in Windows File Explorer; if one or more items are selected, those files are also pre-selected in Explorer
 - Hover over a folder to see a tooltip showing the number of photos, videos, and total items in that folder
 - Right-click any photo or video and choose **Open** to open it in its default app, or **Open With…** to choose another app; double-clicking a tile does the same as **Open**
 - Hover over any photo or video tile to see a tooltip showing its type, date, dimensions (photos) or length (videos), and file size
