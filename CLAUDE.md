@@ -26,13 +26,17 @@ WPF MVVM app with two modes — **Organise** and **Present** — wired via a Dat
 | Layer | Location | Role |
 |-------|----------|------|
 | Models | `Models/` | Pure data: `PhotoFolder`, `PhotoItem`, JSON sidecar DTOs |
-| Services | `Services/` | `PhotoLibraryService` — scan folders, apply/save sidecar ordering; `UserSettings` — persist last folder to `%APPDATA%\PhotoPresenter\settings.json` |
+| Services | `Services/` | `PhotoLibraryService` — scan folders, apply/save sidecar ordering; `UserSettings` — persist last folder, selected folder, window bounds, and splitter position to `%APPDATA%\PhotoPresenter\settings.json` |
 | ViewModels | `ViewModels/` | All MVVM state; use `CommunityToolkit.Mvvm` `[ObservableProperty]` / `[RelayCommand]` source generators |
 | Views | `Views/` + `MainWindow.xaml` | XAML layout + code-behind (only D&D event wiring and mouse event forwarding — no business logic) |
 
 ### Mode switching
 
 `MainViewModel.CurrentMode` (enum `AppMode`) controls `CurrentView` (computed property). `MainWindow.cs` subscribes to `PropertyChanged` on `MainViewModel` and handles the `WindowStyle`/`WindowState` transition for fullscreen Present mode.
+
+### Session persistence
+
+`UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name, matched case-insensitively on restore), window bounds, `WindowMaximized`, and `SplitterPosition`. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point for all of these — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds the window bounds and `LastSelectedFolder` before writing. On startup, `MainViewModel` passes `LastSelectedFolder` to `OrganiseViewModel.LoadAsync`, which selects the matching folder after loading or falls back to the first folder if not found.
 
 ### Sidecar file format
 
