@@ -31,7 +31,7 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(settings.LastParentFolder))
         {
             ParentFolderPath = settings.LastParentFolder;
-            _ = OrganiseVM.LoadAsync(settings.LastParentFolder, settings.LastSelectedFolder);
+            _ = OrganiseVM.LoadAsync(settings.LastParentFolder, settings.LastSelectedFolder, settings.LastSelectedPhoto);
         }
     }
 

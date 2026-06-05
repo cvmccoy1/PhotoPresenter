@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         }
         settings.WindowMaximized    = _organiseWindowState == WindowState.Maximized;
         settings.LastSelectedFolder = _vm.OrganiseVM.SelectedFolder?.Name ?? "";
+        settings.LastSelectedPhoto  = _vm.OrganiseVM.SelectedPhoto?.FileName ?? "";
         settings.Save();
     }
 
