@@ -35,6 +35,7 @@ public partial class MainViewModel : ObservableObject
         }
         OrganiseVM.ShowAllFolders = settings.ShowAllFolders;
         OrganiseVM.ShowAllPhotos  = settings.ShowAllPhotos;
+        PresentVM.Volume          = settings.Volume;
     }
 
     [RelayCommand]

@@ -65,6 +65,7 @@ public partial class MainWindow : Window
         settings.LastSelectedPhoto  = _vm.OrganiseVM.SelectedPhoto?.FileName ?? "";
         settings.ShowAllFolders     = _vm.OrganiseVM.ShowAllFolders;
         settings.ShowAllPhotos      = _vm.OrganiseVM.ShowAllPhotos;
+        settings.Volume             = _vm.PresentVM.Volume;
         settings.Save();
     }
 
