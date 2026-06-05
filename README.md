@@ -31,7 +31,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - Click a folder (and optionally an item) before switching to Present mode to start from that point
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
-- Choose a **theme** from the toolbar dropdown: **Light** (default), **Dark**, **High Contrast Light**, **High Contrast Dark**, **Light – Large Text**, or **Dark – Large Text**; the selection is remembered between sessions and takes effect immediately without a restart
+- Choose a **theme** from the toolbar dropdown: **Light** (default), **Dark**, **High Contrast Light**, **High Contrast Dark**, **Light – Large Text**, **Dark – Large Text**, or **Slate Blue** (navy/steel-blue palette with vibrant labels); the selection is remembered between sessions and takes effect immediately without a restart
 
 ### Present Mode
 - Fullscreen display on your TV or monitor
