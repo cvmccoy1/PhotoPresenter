@@ -166,6 +166,11 @@
                      DragLeave="PhotoList_DragLeave"
                      Drop="PhotoList_Drop"
                      MouseDoubleClick="PhotoList_MouseDoubleClick">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open Folder in Explorer" Click="PhotoOpenExplorer_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal" Margin="4"/>
