@@ -187,7 +187,7 @@ public partial class OrganiseViewModel : ObservableObject
         value?.LoadPhotoThumbnails();
     }
 
-    public async Task LoadAsync(string parentPath)
+    public async Task LoadAsync(string parentPath, string? initialFolderName = null)
     {
         ParentFolderPath = parentPath;
         var allFolders = await _library.LoadLibraryAsync(parentPath);
@@ -204,7 +204,9 @@ public partial class OrganiseViewModel : ObservableObject
                 Folders.Add(vm);
         }
 
-        SelectedFolder = Folders.Count > 0 ? Folders[0] : null;
+        SelectedFolder = (!string.IsNullOrEmpty(initialFolderName)
+            ? Folders.FirstOrDefault(f => f.Name.Equals(initialFolderName, StringComparison.OrdinalIgnoreCase))
+            : null) ?? Folders.FirstOrDefault();
         OnPropertyChanged(nameof(FolderCountLabel));
 
         _undoStack.Clear();

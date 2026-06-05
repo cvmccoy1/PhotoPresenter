@@ -60,7 +60,8 @@ public partial class MainWindow : Window
             settings.WindowWidth  = bounds.Width;
             settings.WindowHeight = bounds.Height;
         }
-        settings.WindowMaximized = _organiseWindowState == WindowState.Maximized;
+        settings.WindowMaximized    = _organiseWindowState == WindowState.Maximized;
+        settings.LastSelectedFolder = _vm.OrganiseVM.SelectedFolder?.Name ?? "";
         settings.Save();
     }
 
