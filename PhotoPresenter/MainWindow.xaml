@@ -50,6 +50,7 @@
                     <ComboBoxItem Tag="LightLargeText">Light – Large Text</ComboBoxItem>
                     <ComboBoxItem Tag="DarkLargeText">Dark – Large Text</ComboBoxItem>
                     <ComboBoxItem Tag="SlateBlue">Slate Blue</ComboBoxItem>
+                    <ComboBoxItem Tag="SlateBlueLargeText">Slate Blue – Large Text</ComboBoxItem>
                 </ComboBox>
             </ToolBar>
         </ToolBarTray>
