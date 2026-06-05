@@ -6,7 +6,7 @@
              xmlns:vm="clr-namespace:PhotoPresenter.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:OrganiseViewModel}"
-             Background="#F0F0F0">
+             Background="{DynamicResource AppBackground}">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="FolderColumn" Width="280" MinWidth="150"/>
@@ -15,27 +15,32 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left: Folder list -->
-        <DockPanel Grid.Column="0" Background="White">
-            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,5">
+        <DockPanel Grid.Column="0" Background="{DynamicResource AppBackground}">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="8,5">
                 <DockPanel>
                     <CheckBox DockPanel.Dock="Right"
                               Content="Show All"
                               IsChecked="{Binding ShowAllFolders}"
                               VerticalAlignment="Center"
-                              FontSize="10" Foreground="#555" Margin="4,0,0,0"/>
+                              FontSize="{DynamicResource FontSize.XSmall}"
+                              Foreground="{DynamicResource PanelText}"
+                              Margin="4,0,0,0"/>
                     <Button DockPanel.Dock="Right"
                             Content="Sort by Name"
                             Click="SortByName_Click"
                             VerticalAlignment="Center"
                             Padding="6,1" Margin="0,0,8,0"
-                            FontSize="10" Cursor="Hand"/>
-                    <TextBlock Text="FOLDERS" FontWeight="SemiBold" FontSize="11"
-                               Foreground="#555" VerticalAlignment="Center"/>
+                            FontSize="{DynamicResource FontSize.XSmall}" Cursor="Hand"/>
+                    <TextBlock Text="FOLDERS" FontWeight="SemiBold"
+                               FontSize="{DynamicResource FontSize.Small}"
+                               Foreground="{DynamicResource PanelText}"
+                               VerticalAlignment="Center"/>
                 </DockPanel>
             </Border>
-            <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBackground}" Padding="8,4">
                 <TextBlock Text="{Binding FolderCountLabel}"
-                           FontSize="11" Foreground="#555"/>
+                           FontSize="{DynamicResource FontSize.Small}"
+                           Foreground="{DynamicResource PanelText}"/>
             </Border>
             <ListBox x:Name="FolderList"
                      ItemsSource="{Binding CurrentFolderItems}"
@@ -72,7 +77,8 @@
                             </StackPanel.Style>
                             <StackPanel.ToolTip>
                                 <ToolTip DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                    <TextBlock Text="{Binding FolderToolTipText}" FontFamily="Segoe UI" FontSize="11" LineHeight="18"/>
+                                    <TextBlock Text="{Binding FolderToolTipText}" FontFamily="Segoe UI"
+                                               FontSize="{DynamicResource FontSize.Small}" LineHeight="18"/>
                                 </ToolTip>
                             </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
@@ -104,13 +110,15 @@
                                     <MenuItem Header="Open Folder in Explorer" Tag="FolderOpenExplorer" Click="FolderOpenExplorer_Click"/>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>
-                            <Border Width="72" Height="54" Background="#DDD" ClipToBounds="True" Margin="0,0,8,0">
+                            <Border Width="72" Height="54"
+                                    Background="{DynamicResource ThumbnailBackground}"
+                                    ClipToBounds="True" Margin="0,0,8,0">
                                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
                             </Border>
                             <TextBlock Text="{Binding Name}"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       FontSize="13"/>
+                                       FontSize="{DynamicResource FontSize.Normal}"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -122,40 +130,46 @@
                       Width="5"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
-                      Background="#CCC"/>
+                      Background="{DynamicResource SplitterBackground}"/>
 
         <!-- Right: Photo grid -->
         <DockPanel Grid.Column="2">
-            <Border DockPanel.Dock="Top" Background="#E0E0E0" Padding="8,5">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="8,5">
                 <DockPanel>
                     <CheckBox DockPanel.Dock="Right"
                               Content="Show All"
                               IsChecked="{Binding ShowAllPhotos}"
                               VerticalAlignment="Center"
-                              FontSize="10" Foreground="#555" Margin="4,0,0,0"/>
+                              FontSize="{DynamicResource FontSize.XSmall}"
+                              Foreground="{DynamicResource PanelText}"
+                              Margin="4,0,0,0"/>
                     <Button DockPanel.Dock="Right"
                             Content="Sort by Date"
                             Click="SortByDate_Click"
                             VerticalAlignment="Center"
                             Padding="6,1" Margin="0,0,8,0"
-                            FontSize="10" Cursor="Hand"/>
-                    <TextBlock FontWeight="SemiBold" FontSize="11" Foreground="#555" VerticalAlignment="Center">
+                            FontSize="{DynamicResource FontSize.XSmall}" Cursor="Hand"/>
+                    <TextBlock FontWeight="SemiBold"
+                               FontSize="{DynamicResource FontSize.Small}"
+                               Foreground="{DynamicResource PanelText}"
+                               VerticalAlignment="Center">
                         <TextBlock.Text>
                             <Binding Path="SelectedFolder.Name" StringFormat="PHOTOS/VIDEOS IN: {0}"/>
                         </TextBlock.Text>
                     </TextBlock>
                 </DockPanel>
             </Border>
-            <Border DockPanel.Dock="Bottom" Background="#E0E0E0" Padding="8,4">
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource PanelBackground}" Padding="8,4">
                 <TextBlock Text="{Binding PhotoCountLabel}"
-                           FontSize="11" Foreground="#555"/>
+                           FontSize="{DynamicResource FontSize.Small}"
+                           Foreground="{DynamicResource PanelText}"/>
             </Border>
             <ListBox x:Name="PhotoList"
                      ItemsSource="{Binding CurrentPhotoItems}"
                      SelectedItem="{Binding SelectedPhoto}"
                      SelectionMode="Extended"
                      BorderThickness="0"
-                     Background="#F8F8F8"
+                     Background="{DynamicResource ListBackground}"
                      AllowDrop="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      KeyDown="PhotoList_KeyDown"
@@ -198,7 +212,8 @@
                             </StackPanel.Style>
                             <StackPanel.ToolTip>
                                 <ToolTip DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                    <TextBlock Text="{Binding ToolTipText}" FontFamily="Segoe UI" FontSize="11" LineHeight="18"/>
+                                    <TextBlock Text="{Binding ToolTipText}" FontFamily="Segoe UI"
+                                               FontSize="{DynamicResource FontSize.Small}" LineHeight="18"/>
                                 </ToolTip>
                             </StackPanel.ToolTip>
                             <StackPanel.ContextMenu>
@@ -279,7 +294,7 @@
                             <Border Width="154" Height="104" Background="Transparent" ClipToBounds="True">
                                 <Grid>
                                     <Image Source="{Binding Thumbnail}" Stretch="Uniform"/>
-                                    <Grid Background="#1A1A1A">
+                                    <Grid Background="{DynamicResource VideoOverlayBackground}">
                                         <Grid.Style>
                                             <Style TargetType="Grid">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -290,24 +305,26 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Grid.Style>
-                                        <TextBlock Text="▶" FontSize="40" Foreground="#666"
+                                        <TextBlock Text="▶"
+                                                   FontSize="{DynamicResource FontSize.VideoIcon}"
+                                                   Foreground="{DynamicResource VideoIconForeground}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Grid>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
                                        TextTrimming="CharacterEllipsis"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource FontSize.XSmall}"
                                        Margin="0,2,0,0"
                                        TextAlignment="Center"
-                                       Foreground="#444"/>
+                                       Foreground="{DynamicResource FilenameForeground}"/>
                             <TextBlock Text="{Binding Caption}"
                                        TextWrapping="Wrap"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource FontSize.XSmall}"
                                        FontStyle="Italic"
                                        Margin="0,1,0,0"
                                        TextAlignment="Center"
-                                       Foreground="#666">
+                                       Foreground="{DynamicResource CaptionForeground}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>

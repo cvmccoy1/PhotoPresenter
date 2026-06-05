@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using PhotoPresenter.Services;
@@ -23,6 +24,28 @@ public partial class MainWindow : Window
 
         _settings = UserSettings.Load();
         RestoreWindowBounds();
+        InitThemeComboBox();
+        ThemeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
+    }
+
+    private void InitThemeComboBox()
+    {
+        var theme = _settings.Theme ?? "Light";
+        foreach (ComboBoxItem item in ThemeComboBox.Items)
+        {
+            if ((string)item.Tag == theme) { ThemeComboBox.SelectedItem = item; return; }
+        }
+        ThemeComboBox.SelectedIndex = 0;
+    }
+
+    private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThemeComboBox.SelectedItem is not ComboBoxItem item) return;
+        var themeName = (string)item.Tag;
+        ThemeService.Apply(themeName);
+        var settings = UserSettings.Load();
+        settings.Theme = themeName;
+        settings.Save();
     }
 
     private void RestoreWindowBounds()
@@ -66,6 +89,8 @@ public partial class MainWindow : Window
         settings.ShowAllFolders     = _vm.OrganiseVM.ShowAllFolders;
         settings.ShowAllPhotos      = _vm.OrganiseVM.ShowAllPhotos;
         settings.Volume             = _vm.PresentVM.Volume;
+        if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
+            settings.Theme = (string)themeItem.Tag;
         settings.Save();
     }
 

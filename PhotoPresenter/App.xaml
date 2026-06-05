@@ -5,11 +5,16 @@
              xmlns:views="clr-namespace:PhotoPresenter.Views"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <DataTemplate DataType="{x:Type vm:OrganiseViewModel}">
-            <views:OrganiseView/>
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:PresentViewModel}">
-            <views:PresentView/>
-        </DataTemplate>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Light.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <DataTemplate DataType="{x:Type vm:OrganiseViewModel}">
+                <views:OrganiseView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PresentViewModel}">
+                <views:PresentView/>
+            </DataTemplate>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

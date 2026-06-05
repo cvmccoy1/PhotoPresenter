@@ -14,7 +14,11 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontSize">
+                <Setter.Value>
+                    <DynamicResource ResourceKey="FontSize.PresentCaption"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -95,7 +99,7 @@
         <!-- Loading indicator (hidden when CurrentIsVideo or image loaded) -->
         <TextBlock Text="Loading…"
                    Foreground="#888"
-                   FontSize="20"
+                   FontSize="{DynamicResource FontSize.PresentLoading}"
                    FontFamily="Segoe UI"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
@@ -131,11 +135,15 @@
             </StackPanel.Style>
             <Border Background="#99000000" CornerRadius="3" Padding="8,4" Margin="0,2">
                 <TextBlock Text="{Binding FolderLabel}"
-                           Foreground="White" FontSize="14" FontFamily="Segoe UI"/>
+                           Foreground="White"
+                           FontSize="{DynamicResource FontSize.Large}"
+                           FontFamily="Segoe UI"/>
             </Border>
             <Border Background="#99000000" CornerRadius="3" Padding="8,4" Margin="0,2">
                 <TextBlock Text="{Binding PhotoLabel}"
-                           Foreground="#CCC" FontSize="12" FontFamily="Segoe UI"/>
+                           Foreground="#CCC"
+                           FontSize="{DynamicResource FontSize.Medium}"
+                           FontFamily="Segoe UI"/>
             </Border>
         </StackPanel>
 
@@ -156,7 +164,7 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <TextBlock Foreground="#888" FontSize="11" FontFamily="Segoe UI">
+            <TextBlock Foreground="#888" FontSize="{DynamicResource FontSize.Small}" FontFamily="Segoe UI">
                 ← → Space · +/- scroll · drag pan · Esc
             </TextBlock>
         </Border>
@@ -182,7 +190,7 @@
             </Border.Style>
             <TextBlock Text="{Binding CurrentCaption}"
                        Foreground="White"
-                       FontSize="18"
+                       FontSize="{DynamicResource FontSize.PresentCaption}"
                        FontFamily="Segoe UI"
                        TextWrapping="Wrap"
                        TextAlignment="Center"/>
@@ -217,7 +225,9 @@
                 <DockPanel Grid.Row="1">
                     <!-- Volume (right) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Vol" Foreground="#AAA" FontSize="11" FontFamily="Segoe UI"
+                        <TextBlock Text="Vol" Foreground="#AAA"
+                                   FontSize="{DynamicResource FontSize.Small}"
+                                   FontFamily="Segoe UI"
                                    VerticalAlignment="Center" Margin="8,0,6,0"/>
                         <Slider Width="100" Minimum="0" Maximum="1" VerticalAlignment="Center"
                                 Value="{Binding Volume, Mode=TwoWay}"/>
@@ -227,9 +237,11 @@
                         <Border Background="#55000000" CornerRadius="3" Padding="8,3" Margin="0,0,10,0">
                             <StackPanel>
                                 <TextBlock Text="{Binding FolderLabel}" Foreground="White"
-                                           FontSize="13" FontFamily="Segoe UI"/>
+                                           FontSize="{DynamicResource FontSize.Normal}"
+                                           FontFamily="Segoe UI"/>
                                 <TextBlock Text="{Binding PhotoLabel}" Foreground="#CCC"
-                                           FontSize="11" FontFamily="Segoe UI"/>
+                                           FontSize="{DynamicResource FontSize.Small}"
+                                           FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
                         <Button Content="↺" Style="{StaticResource VideoButtonStyle}"
@@ -237,11 +249,13 @@
                         <Button Content="{Binding PlayPauseIcon}" Style="{StaticResource VideoButtonStyle}"
                                 Click="PlayPause_Click" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding PositionLabel}"
-                                   Foreground="White" FontSize="14" FontFamily="Segoe UI Mono"
+                                   Foreground="White"
+                                   FontSize="{DynamicResource FontSize.Large}"
+                                   FontFamily="Segoe UI Mono"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Button Content="↻ 90°" Style="{StaticResource VideoButtonStyle}"
                                 Click="RotateVideo_Click" ToolTip="Rotate 90°"
-                                FontSize="13" Padding="8,4"/>
+                                FontSize="{DynamicResource FontSize.Normal}" Padding="8,4"/>
                     </StackPanel>
                 </DockPanel>
             </Grid>

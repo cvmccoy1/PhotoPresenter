@@ -39,6 +39,17 @@
                 <Button Content="About"
                         Click="About_Click"
                         Padding="6,3" Margin="2"/>
+                <Separator/>
+                <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="4,0,2,0"
+                           FontSize="11" Foreground="#555"/>
+                <ComboBox x:Name="ThemeComboBox" Width="155" VerticalAlignment="Center">
+                    <ComboBoxItem Tag="Light">Light</ComboBoxItem>
+                    <ComboBoxItem Tag="Dark">Dark</ComboBoxItem>
+                    <ComboBoxItem Tag="HighContrastLight">High Contrast Light</ComboBoxItem>
+                    <ComboBoxItem Tag="HighContrastDark">High Contrast Dark</ComboBoxItem>
+                    <ComboBoxItem Tag="LightLargeText">Light – Large Text</ComboBoxItem>
+                    <ComboBoxItem Tag="DarkLargeText">Dark – Large Text</ComboBoxItem>
+                </ComboBox>
             </ToolBar>
         </ToolBarTray>
 

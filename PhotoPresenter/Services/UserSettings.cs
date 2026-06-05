@@ -18,6 +18,7 @@ public class UserSettings
     public double? WindowHeight { get; set; }
     public bool WindowMaximized { get; set; }
     public double? SplitterPosition { get; set; }
+    public string Theme { get; set; } = "Light";
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
