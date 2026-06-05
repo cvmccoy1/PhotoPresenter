@@ -5,7 +5,7 @@ namespace PhotoPresenter.Services;
 public static class ThemeService
 {
     private static readonly string[] ValidThemes =
-        ["Light", "Dark", "HighContrastLight", "HighContrastDark", "LightLargeText", "DarkLargeText"];
+        ["Light", "Dark", "HighContrastLight", "HighContrastDark", "LightLargeText", "DarkLargeText", "SlateBlue"];
 
     public static void Apply(string themeName)
     {

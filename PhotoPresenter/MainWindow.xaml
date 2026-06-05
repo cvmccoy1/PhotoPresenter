@@ -49,6 +49,7 @@
                     <ComboBoxItem Tag="HighContrastDark">High Contrast Dark</ComboBoxItem>
                     <ComboBoxItem Tag="LightLargeText">Light – Large Text</ComboBoxItem>
                     <ComboBoxItem Tag="DarkLargeText">Dark – Large Text</ComboBoxItem>
+                    <ComboBoxItem Tag="SlateBlue">Slate Blue</ComboBoxItem>
                 </ComboBox>
             </ToolBar>
         </ToolBarTray>

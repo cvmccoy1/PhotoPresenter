@@ -47,6 +47,7 @@
                      SelectedItem="{Binding SelectedFolder}"
                      SelectionMode="Extended"
                      BorderThickness="0"
+                     Background="{DynamicResource ListBackground}"
                      AllowDrop="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      KeyDown="FolderList_KeyDown"
@@ -118,7 +119,8 @@
                             <TextBlock Text="{Binding Name}"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       FontSize="{DynamicResource FontSize.Normal}"/>
+                                       FontSize="{DynamicResource FontSize.Normal}"
+                                       Foreground="{DynamicResource FilenameForeground}"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
