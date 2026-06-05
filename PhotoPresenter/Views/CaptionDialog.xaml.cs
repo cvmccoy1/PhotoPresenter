@@ -16,17 +16,21 @@ public partial class CaptionDialog : Window
 
     private void OK_Click(object sender, RoutedEventArgs e)
     {
-        Caption = CaptionBox.Text.Trim();
+        Caption = NormalizeCaption(CaptionBox.Text);
         DialogResult = true;
     }
 
     private void CaptionBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        // Enter alone = OK; Shift+Enter falls through to AcceptsReturn (inserts newline).
+        if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.None)
         {
-            Caption = CaptionBox.Text.Trim();
+            Caption = NormalizeCaption(CaptionBox.Text);
             DialogResult = true;
             e.Handled = true;
         }
     }
+
+    private static string NormalizeCaption(string text) =>
+        text.Replace("\r\n", "\n").Replace("\r", "\n").Trim();
 }

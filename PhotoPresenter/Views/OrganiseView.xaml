@@ -302,7 +302,7 @@
                                        TextAlignment="Center"
                                        Foreground="#444"/>
                             <TextBlock Text="{Binding Caption}"
-                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="Wrap"
                                        FontSize="10"
                                        FontStyle="Italic"
                                        Margin="0,1,0,0"

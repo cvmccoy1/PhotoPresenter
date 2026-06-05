@@ -13,14 +13,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Enter caption:" Margin="0,0,0,6"/>
+        <TextBlock Grid.Row="0" Text="Enter caption (Shift+Enter for a new line):" Margin="0,0,0,6"/>
 
         <TextBox x:Name="CaptionBox"
                  Grid.Row="1"
                  MaxLength="500"
                  TextWrapping="Wrap"
-                 AcceptsReturn="False"
+                 AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto"
+                 MaxHeight="220"
                  Margin="0,0,0,16"
                  Padding="4"
                  KeyDown="CaptionBox_KeyDown"/>
