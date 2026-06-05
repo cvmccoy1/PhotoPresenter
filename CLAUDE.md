@@ -75,6 +75,10 @@ Handled in `MainWindow.Window_PreviewKeyDown`: `Right`/`Space` = next, `Left` = 
 
 Both pane context menus expose **Open Folder in Explorer** (added at the bottom after a separator). Folders pane: enabled only for a single-folder selection; `FolderTile_ContextMenuOpening` sets `IsEnabled=false` on `FolderOpenExplorer` when 2+ folders are selected. Photos/Videos pane: always enabled. `PhotoOpenExplorer_Click` dispatches to three paths based on the selection count: 0 selected → `explorer.exe "folderPath"`; 1 selected → `explorer.exe /select,"filePath"`; 2+ selected → `SHOpenFolderAndSelectItems` (shell32 P/Invoke, with plain folder-open as fallback). PIDs from `SHParseDisplayName` are freed via `CoTaskMemFree` in a `finally` block.
 
+### Captions
+
+`CaptionDialog` (`Views/CaptionDialog.xaml`) uses `AcceptsReturn="True"` with a `MaxHeight` so the TextBox grows as lines are added then scrolls. Plain Enter submits the dialog; Shift+Enter inserts a newline (the `KeyDown` handler checks `Keyboard.Modifiers` for Shift before treating Enter as OK). `NormalizeCaption` normalises `\r\n` to `\n` and trims surrounding whitespace before the caption is stored. Caption TextBlocks in both the Organise tile (`TextWrapping="Wrap"`, `TextAlignment="Center"`) and the Present mode overlay (`TextWrapping="Wrap"`, `TextAlignment="Center"`) render newlines naturally from the stored `\n` characters.
+
 ## Global usings
 
 `GlobalUsings.cs` adds `System.IO`, `System.Windows.Media`, and `System.Windows.Media.Imaging` globally (required because the WPF SDK creates a temporary project for compilation that does not inherit all implicit usings).
