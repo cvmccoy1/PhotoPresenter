@@ -123,6 +123,7 @@ public class PhotoLibraryService : IPhotoLibraryService
 
             var removedNames = sidecar.Removed ?? new();
             var captions     = sidecar.Captions;
+            var mirroredSet  = new HashSet<string>(sidecar.Mirrored ?? new(), StringComparer.OrdinalIgnoreCase);
             var removedSet   = new HashSet<string>(removedNames, StringComparer.OrdinalIgnoreCase);
             var allFiles     = files.ToDictionary(f => f.Name, f => f, StringComparer.OrdinalIgnoreCase);
             var mutable      = new Dictionary<string, FileInfo>(allFiles, StringComparer.OrdinalIgnoreCase);
@@ -131,7 +132,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             // Active in sidecar order
             foreach (var name in sidecar.Order)
                 if (mutable.Remove(name, out var file))
-                    result.Add(ToPhotoItem(file, captions: captions));
+                    result.Add(ToPhotoItem(file, captions: captions, mirrored: mirroredSet));
 
             // New files (not in sidecar, not removed) appended by effective date
             var newItems = mutable.Values
@@ -145,7 +146,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             // Removed files that still exist on disk
             foreach (var name in removedNames)
                 if (allFiles.TryGetValue(name, out var file))
-                    result.Add(ToPhotoItem(file, isRemoved: true, captions: captions));
+                    result.Add(ToPhotoItem(file, isRemoved: true, captions: captions, mirrored: mirroredSet));
 
             return result;
         }
@@ -157,7 +158,7 @@ public class PhotoLibraryService : IPhotoLibraryService
     }
 
     private static PhotoItem ToPhotoItem(FileInfo file, bool isRemoved = false,
-        Dictionary<string, string>? captions = null)
+        Dictionary<string, string>? captions = null, HashSet<string>? mirrored = null)
     {
         var item = new PhotoItem
         {
@@ -165,7 +166,8 @@ public class PhotoLibraryService : IPhotoLibraryService
             FullPath     = file.FullName,
             CreationDate = GetEffectiveDate(file),
             IsRemoved    = isRemoved,
-            IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name))
+            IsVideo      = VideoExtensions.Contains(Path.GetExtension(file.Name)),
+            IsMirrored   = mirrored?.Contains(file.Name) == true
         };
         if (captions != null && captions.TryGetValue(file.Name, out var cap))
             item.Caption = cap;
@@ -235,11 +237,16 @@ public class PhotoLibraryService : IPhotoLibraryService
         var caps = all
             .Where(p => !string.IsNullOrEmpty(p.Caption))
             .ToDictionary(p => p.FileName, p => p.Caption);
+        var mirrored = all
+            .Where(p => p.IsMirrored)
+            .Select(p => p.FileName)
+            .ToList();
         var sidecar = new PhotoOrderSidecar
         {
             Order    = all.Where(p => !p.IsRemoved).Select(p => p.FileName).ToList(),
             Removed  = all.Where(p =>  p.IsRemoved).Select(p => p.FileName).ToList(),
-            Captions = caps.Count > 0 ? caps : null
+            Captions = caps.Count > 0 ? caps : null,
+            Mirrored = mirrored.Count > 0 ? mirrored : null
         };
         File.WriteAllText(Path.Combine(folder.FullPath, PhotoOrderFile), JsonSerializer.Serialize(sidecar, JsonOptions));
     }

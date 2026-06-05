@@ -97,7 +97,7 @@ public partial class OrganiseViewModel : ObservableObject
 
     private sealed record PhotoSnapshot(
         PhotoFolderViewModel Folder,
-        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption)> Items);
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> Items);
 
     private readonly List<object> _undoStack = new();
 
@@ -114,7 +114,7 @@ public partial class OrganiseViewModel : ObservableObject
     private void PushPhotoUndo(PhotoFolderViewModel folder)
     {
         _undoStack.Add(new PhotoSnapshot(folder,
-            folder.AllPhotoItems.Select(p => (p, p.IsRemoved, p.Caption)).ToArray()));
+            folder.AllPhotoItems.Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray()));
         if (_undoStack.Count > MaxUndoDepth) _undoStack.RemoveAt(0);
         OnPropertyChanged(nameof(CanUndo));
     }
@@ -159,10 +159,11 @@ public partial class OrganiseViewModel : ObservableObject
         folder.Photos.Clear();
         folder.AllPhotoItems.Clear();
 
-        foreach (var (vm, wasRemoved, caption) in snap.Items)
+        foreach (var (vm, wasRemoved, caption, wasMirrored) in snap.Items)
         {
-            vm.IsRemoved = wasRemoved;
-            vm.Caption   = caption;
+            vm.IsRemoved  = wasRemoved;
+            vm.Caption    = caption;
+            vm.IsMirrored = wasMirrored;
             folder.AllPhotoItems.Add(vm);
             if (!wasRemoved) folder.Photos.Add(vm);
         }
@@ -362,6 +363,15 @@ public partial class OrganiseViewModel : ObservableObject
         PushPhotoUndo(SelectedFolder);
         foreach (var p in photos)
             p.Caption = caption;
+        SaveAllPhotoOrder(SelectedFolder);
+    }
+
+    public void ToggleMirrors(IList<PhotoItemViewModel> photos)
+    {
+        if (SelectedFolder == null || photos.Count == 0) return;
+        PushPhotoUndo(SelectedFolder);
+        foreach (var p in photos)
+            p.IsMirrored = !p.IsMirrored;
         SaveAllPhotoOrder(SelectedFolder);
     }
 

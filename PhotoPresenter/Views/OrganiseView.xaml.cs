@@ -436,6 +436,18 @@ public partial class OrganiseView : UserControl
             await Vm.SortPhotosByDateAsync();
     }
 
+    private void PhotoMirror_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        var targets = SelectedTargets<PhotoItemViewModel>(PhotoList, sender);
+        bool isMirrorAction = sender is MenuItem { Tag: "Mirror" };
+        var applicable = isMirrorAction
+            ? targets.Where(p => !p.IsMirrored).ToList()
+            : targets.Where(p =>  p.IsMirrored).ToList();
+        if (applicable.Count > 0)
+            Vm.ToggleMirrors(applicable);
+    }
+
     private void PhotoRemove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
@@ -465,6 +477,12 @@ public partial class OrganiseView : UserControl
         // Open / Open With — disabled for multi-selection.
         SetMenuItemEnabled(cm, "Open",     false);
         SetMenuItemEnabled(cm, "OpenWith", false);
+
+        // Mirror / Remove Mirror — toggle each independently; show whichever apply.
+        bool anyMirrored    = selected.Any(p =>  p.IsMirrored);
+        bool anyNotMirrored = selected.Any(p => !p.IsMirrored);
+        SetMenuItemVisibility(cm, "Mirror",       anyNotMirrored ? Visibility.Visible : Visibility.Collapsed);
+        SetMenuItemVisibility(cm, "RemoveMirror", anyMirrored    ? Visibility.Visible : Visibility.Collapsed);
 
         // Remove / Restore — based on whether any are visible or hidden.
         bool anyVisible = selected.Any(p => !p.IsRemoved);

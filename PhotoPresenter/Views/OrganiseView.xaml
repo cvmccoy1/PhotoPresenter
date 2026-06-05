@@ -223,6 +223,29 @@
                                     <MenuItem Header="Open" Tag="Open" Click="PhotoOpen_Click"/>
                                     <MenuItem Header="Open With…" Tag="OpenWith" Click="PhotoOpenWith_Click"/>
                                     <Separator/>
+                                    <MenuItem Header="Mirror" Tag="Mirror" Click="PhotoMirror_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMirrored}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="Remove Mirror" Tag="RemoveMirror" Click="PhotoMirror_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMirrored}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
                                     <MenuItem Header="Remove from Presentation" Tag="Remove" Click="PhotoRemove_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
@@ -295,7 +318,22 @@
                             </StackPanel.ContextMenu>
                             <Border Width="154" Height="104" Background="Transparent" ClipToBounds="True">
                                 <Grid>
-                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform"/>
+                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform"
+                                           RenderTransformOrigin="0.5,0.5">
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMirrored}" Value="True">
+                                                        <Setter Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="-1"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
                                     <Grid Background="{DynamicResource VideoOverlayBackground}">
                                         <Grid.Style>
                                             <Style TargetType="Grid">

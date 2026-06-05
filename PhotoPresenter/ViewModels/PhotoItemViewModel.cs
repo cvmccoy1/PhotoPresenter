@@ -24,21 +24,28 @@ public partial class PhotoItemViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasCaption))]
     private string _caption = "";
 
+    [ObservableProperty] private bool   _isMirrored;
     [ObservableProperty] private string _toolTipText = "";
 
     public bool HasCaption => !string.IsNullOrEmpty(Caption);
 
     partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
     partial void OnCaptionChanged(string value)  => Model.Caption  = value;
+    partial void OnIsMirroredChanged(bool value)
+    {
+        Model.IsMirrored = value;
+        _toolTipLoaded = false;
+    }
 
     private bool _toolTipLoaded;
     private bool _thumbnailRequested;
 
     public PhotoItemViewModel(PhotoItem model)
     {
-        Model      = model;
-        _isRemoved = model.IsRemoved;
-        _caption   = model.Caption;
+        Model       = model;
+        _isRemoved  = model.IsRemoved;
+        _caption    = model.Caption;
+        _isMirrored = model.IsMirrored;
         // Thumbnails are loaded on demand via EnsureThumbnailLoaded().
     }
 
@@ -61,7 +68,7 @@ public partial class PhotoItemViewModel : ObservableObject
         string size   = FormatSize(fi.Exists ? fi.Length : 0);
         string detail = IsVideo ? "Length: …" : "Dimensions: …";
 
-        ToolTipText = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+        ToolTipText = BuildToolTipText(ext, date, detail, size);
 
         _ = LoadToolTipDetailAsync(fi);
     }
@@ -83,7 +90,7 @@ public partial class PhotoItemViewModel : ObservableObject
         string ext  = Path.GetExtension(Model.FileName).ToUpperInvariant();
         string date = Model.CreationDate == default ? "Unknown" : Model.CreationDate.ToString("yyyy-MM-dd h:mm tt");
         string size = FormatSize(fi.Exists ? fi.Length : 0);
-        ToolTipText = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+        ToolTipText = BuildToolTipText(ext, date, detail, size);
     }
 
     private static string GetPhotoDimensions(string path)
@@ -114,6 +121,11 @@ public partial class PhotoItemViewModel : ObservableObject
         }
         catch { return "Unknown"; }
     }
+
+    private string BuildToolTipText(string ext, string date, string detail, string size) =>
+        IsMirrored
+            ? $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}\nMirrored: Yes"
+            : $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
 
     private static string FormatSize(long bytes)
     {

@@ -66,7 +66,10 @@
                    Stretch="Uniform"
                    RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
-                    <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/>
+                        <ScaleTransform ScaleX="{Binding MirrorScaleX}"/>
+                    </TransformGroup>
                 </Image.RenderTransform>
             </Image>
         </Grid>
@@ -82,7 +85,10 @@
                       MediaEnded="VideoPlayer_MediaEnded"
                       MediaFailed="VideoPlayer_MediaFailed">
             <MediaElement.RenderTransform>
-                <RotateTransform Angle="{Binding VideoRotation}"/>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding MirrorScaleX}"/>
+                    <RotateTransform Angle="{Binding VideoRotation}"/>
+                </TransformGroup>
             </MediaElement.RenderTransform>
             <MediaElement.Style>
                 <Style TargetType="MediaElement">

@@ -45,6 +45,12 @@ public partial class PresentViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasCurrentCaption))]
     private string _currentCaption = "";
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MirrorScaleX))]
+    private bool _currentIsMirrored;
+
+    public double MirrorScaleX => CurrentIsMirrored ? -1.0 : 1.0;
+
     public bool HasCurrentCaption => !string.IsNullOrEmpty(CurrentCaption);
 
     partial void OnIsPlayingChanged(bool value) => PlayPauseIcon = value ? "⏸" : "▶";
@@ -65,6 +71,7 @@ public partial class PresentViewModel : ObservableObject
         IsPlaying = false;
         PositionLabel = "";
         VideoRotation = 0;
+        CurrentIsMirrored = false;
         ResetZoomPan();
         UpdateLabels();
         if (_allFolders.Count > 0 && CurrentPhotos.Count > 0)
@@ -148,6 +155,7 @@ public partial class PresentViewModel : ObservableObject
         if (photos.Count == 0) return;
 
         var photo = photos[_currentPhotoIndex];
+        CurrentIsMirrored = photo.IsMirrored;
 
         if (photo.IsVideo)
         {
