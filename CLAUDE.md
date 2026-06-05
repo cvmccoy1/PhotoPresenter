@@ -95,6 +95,20 @@ The toolbar is a `Grid` (`x:Name="MainToolbar"`) with two columns: a `*`-width l
 
 `OrganiseView.xaml` binds all colors and font sizes via `DynamicResource`; `PresentView.xaml` binds only font sizes (Present mode always has a black backdrop). Both `FolderList` and `PhotoList` set `Background="{DynamicResource ListBackground}"` explicitly — without this the ListBox renders with `SystemColors.WindowBrush` (white) regardless of theme. Folder name TextBlocks carry an explicit `Foreground="{DynamicResource FilenameForeground}"` for the same reason. Both ComboBoxes wire `SelectionChanged` in code-behind after `InitThemeComboBox()` / `InitTextComboBox()` set the initial selections, preventing spurious saves on startup.
 
+### Mirror
+
+`IsMirrored` (bool) lives on `PhotoItem` (model) and `PhotoItemViewModel`. Toggling is a user gesture — it is never inferred from file metadata and never baked into the decoded bitmap. Mirroring is therefore a pure display transform applied at render time:
+
+- **Organise thumbnail**: a `DataTrigger` on `IsMirrored` sets a `ScaleTransform(ScaleX=-1)` on the photo `Image` element (with `RenderTransformOrigin="0.5,0.5"`). Videos are not mirrored in the thumbnail (the play-icon overlay is a sibling element and is unaffected).
+- **Present mode photo**: the `Image`'s `RenderTransform` is a `TransformGroup` containing the zoom `ScaleTransform` followed by a mirror `ScaleTransform(ScaleX=MirrorScaleX)`. `MirrorScaleX` is a computed property on `PresentViewModel` that returns −1.0 or 1.0.
+- **Present mode video**: the `MediaElement`'s `RenderTransform` is a `TransformGroup` with the mirror `ScaleTransform` applied **first**, then the auto-rotation `RotateTransform`. This order flips the final on-screen image horizontally regardless of the rotation angle.
+
+`PresentViewModel.CurrentIsMirrored` is set from `photo.IsMirrored` at the top of `LoadCurrentPhotoAsync` (before the video/photo branch), and reset to `false` in `SetFolders`. `MirrorScaleX` notifies via `[NotifyPropertyChangedFor]` on `CurrentIsMirrored`.
+
+Context menu: "Mirror" (tag `Mirror`) is shown when `IsMirrored=False`; "Remove Mirror" (tag `RemoveMirror`) is shown when `IsMirrored=True`. Both items sit before "Remove from Presentation". `PhotoTile_ContextMenuOpening` overrides their visibility for multi-select: if any selected items are not mirrored, "Mirror" is shown; if any are mirrored, "Remove Mirror" is shown (both can appear simultaneously for mixed selections). `PhotoMirror_Click` distinguishes the two by checking `sender.Tag == "Mirror"` and passes only the applicable subset to `OrganiseViewModel.ToggleMirrors`, which pushes a photo undo snapshot and saves the sidecar.
+
+Persistence: stored in `_photoorder.json` under a `"mirrored"` key (list of filenames); the key is omitted entirely when no items are mirrored. `PhotoOrderSidecar.Mirrored` is `List<string>?`; `PhotoLibraryService.ToPhotoItem` accepts a `HashSet<string>? mirrored` and sets `IsMirrored` on load. Tooltip resets (`_toolTipLoaded = false`) in `OnIsMirroredChanged` so "Mirrored: Yes" appears on next hover; not shown when `IsMirrored` is false.
+
 ### Captions
 
 `CaptionDialog` (`Views/CaptionDialog.xaml`) uses `AcceptsReturn="True"` with a `MaxHeight` so the TextBox grows as lines are added then scrolls. Plain Enter submits the dialog; Shift+Enter inserts a newline (the `KeyDown` handler checks `Keyboard.Modifiers` for Shift before treating Enter as OK). `NormalizeCaption` normalises `\r\n` to `\n` and trims surrounding whitespace before the caption is stored. Caption TextBlocks in both the Organise tile (`TextWrapping="Wrap"`, `TextAlignment="Center"`) and the Present mode overlay (`TextWrapping="Wrap"`, `TextAlignment="Center"`) render newlines naturally from the stored `\n` characters.
