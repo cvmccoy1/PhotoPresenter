@@ -23,6 +23,10 @@ public partial class OrganiseView : UserControl
     private PhotoFolderViewModel? _pendingFolderClick;
     private PhotoItemViewModel?   _pendingPhotoClick;
 
+    // True only when the current mouse-down originated on a ListBoxItem (not scrollbar or empty space).
+    private bool _folderDragCanStart;
+    private bool _photoDragCanStart;
+
     public OrganiseView()
     {
         InitializeComponent();
@@ -65,11 +69,14 @@ public partial class OrganiseView : UserControl
 
         if (HitTestContainer(FolderList, pos) == null)
         {
+            _folderDragCanStart = false;
             if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
                 FolderList.UnselectAll();
             _pendingFolderClick = null;
             return;
         }
+
+        _folderDragCanStart = true;
 
         var item = HitTestItem<PhotoFolderViewModel>(FolderList, pos);
         if (item != null
@@ -100,6 +107,7 @@ public partial class OrganiseView : UserControl
     {
         if (Vm?.ShowAllFolders == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
+        if (!_folderDragCanStart) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
 
         _pendingFolderClick = null; // Commit to drag — no deferred click on mouse-up.
@@ -207,11 +215,14 @@ public partial class OrganiseView : UserControl
 
         if (HitTestContainer(PhotoList, pos) == null)
         {
+            _photoDragCanStart = false;
             if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
                 PhotoList.UnselectAll();
             _pendingPhotoClick = null;
             return;
         }
+
+        _photoDragCanStart = true;
 
         var item = HitTestItem<PhotoItemViewModel>(PhotoList, pos);
         if (item != null
@@ -241,6 +252,7 @@ public partial class OrganiseView : UserControl
     {
         if (Vm?.ShowAllPhotos == true) return;
         if (e.LeftButton != MouseButtonState.Pressed) return;
+        if (!_photoDragCanStart) return;
         if (!ExceedsThreshold(e.GetPosition(null))) return;
 
         _pendingPhotoClick = null;
