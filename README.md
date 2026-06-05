@@ -29,7 +29,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, and caption changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
 - Thumbnails load on demand: folder-card thumbnails (left pane) load immediately on launch; photo thumbnails load when you click a folder, keeping startup fast even with thousands of files; decoded thumbnails are cached in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` so subsequent visits are near-instant
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
-- Click a folder (and optionally an item) before switching to Present mode to start from that point
+- Click a folder (and optionally an item) before switching to Present mode to start from that point; press **F5** (or click **▶ Present**) to enter Present mode
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
 - Choose a **color theme** and **text size** independently from the toolbar dropdowns; both are remembered between sessions and take effect immediately without a restart
   - **Theme**: Light (default), Dark, High Contrast Light, High Contrast Dark, Slate Blue, Forest, Sunset, Amethyst, Teal
@@ -40,15 +40,16 @@ A Windows WPF application for presenting family photo and video collections on a
 - Starts at the folder and item selected in Organise mode
 - Clean black background, media fills the screen — no transitions, no effects
 - Keyboard navigation:
+  - **F5** — enter Present mode (also works from Organise mode)
   - **Right Arrow** — next item
   - **Space** — next photo; toggle play/pause for video
   - **Left Arrow** — previous item
   - Automatically moves between subfolders at boundaries
+  - **Escape** — return to Organise mode
 - Photo zoom and pan:
   - **+** / **-** — zoom in / out
   - **Scroll wheel** — zoom in / out
   - **Click and drag** — pan a zoomed image
-  - **Escape** — return to Organise mode
 - Video playback controls (shown at the bottom of the screen):
   - Scrub slider — drag to seek anywhere in the video
   - **↺** — restart from the beginning

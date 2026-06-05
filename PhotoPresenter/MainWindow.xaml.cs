@@ -159,6 +159,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.Key == Key.F5 && _vm.CurrentMode == AppMode.Organise)
+        {
+            _vm.SwitchToPresentCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (_vm.CurrentMode != AppMode.Present) return;
 
         var pvm = _vm.PresentVM;

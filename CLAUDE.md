@@ -51,9 +51,9 @@ Missing entries (renamed/deleted files) are silently skipped; unmentioned items 
 
 `OrganiseViewModel` maintains a `List<object>` undo stack (max 20 entries) of two snapshot record types: `FolderSnapshot` (ordered list of all folder VMs + `IsRemoved` flags) and `PhotoSnapshot` (folder identity + ordered list of all photo VMs + `IsRemoved` + `Caption`). Every mutating method calls `PushFolderUndo()` or `PushPhotoUndo()` before making changes. `Undo()` pops the top entry and reconstructs both the active and all-items collections from the snapshot, then re-saves the sidecar. Multi-select operations use bulk methods (`RemoveFolders`, `RestorePhotos`, `SetCaptions`, etc.) so the whole selection is one undo step. The stack is cleared in `LoadAsync()`. `CanUndo` (plain bool property with manual `OnPropertyChanged`) drives the toolbar button's `IsEnabled`. Ctrl+Z is handled in `MainWindow.Window_PreviewKeyDown` when in Organise mode.
 
-### Key bindings (Present mode)
+### Key bindings
 
-Handled in `MainWindow.Window_PreviewKeyDown`: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise. Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise. Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
 
 ### Zoom / Pan
 
@@ -83,7 +83,7 @@ Both pane context menus expose **Open Folder in Explorer** (added at the bottom 
 
 ### Theming
 
-The toolbar exposes two independent dropdowns — **Theme** (color) and **Text** (size) — wired to two separate `MergedDictionaries` slots in `App.xaml`: `[0]` = color theme, `[1]` = text size. `App.OnStartup` (`App.xaml.cs`) calls `ThemeService.ApplyColor(settings.Theme)` then `ThemeService.ApplyTextSize(settings.TextSize)` before the window appears so there is no flash. `ThemeService` (`Services/ThemeService.cs`) has two methods that each replace the corresponding slot; all `DynamicResource` bindings update live.
+The toolbar is a `Grid` (`x:Name="MainToolbar"`) with two columns: a `*`-width left `ToolBarTray` (Browse Folder, path, Undo, Theme dropdown, Text dropdown, About) and an `Auto`-width right `ToolBarTray` (▶ Present, right-justified). `MainToolbar.Visibility` is toggled in `ApplyMode` when switching to/from Present mode. The toolbar exposes two independent dropdowns — **Theme** (color) and **Text** (size) — wired to two separate `MergedDictionaries` slots in `App.xaml`: `[0]` = color theme, `[1]` = text size. `App.OnStartup` (`App.xaml.cs`) calls `ThemeService.ApplyColor(settings.Theme)` then `ThemeService.ApplyTextSize(settings.TextSize)` before the window appears so there is no flash. `ThemeService` (`Services/ThemeService.cs`) has two methods that each replace the corresponding slot; all `DynamicResource` bindings update live.
 
 **Color themes** (`PhotoPresenter/Themes/*.xaml` — 9 files): Light, Dark, HighContrastLight, HighContrastDark, SlateBlue, Forest, Sunset, Amethyst, Teal. Each defines only `SolidColorBrush` resources: ten named brushes (`AppBackground`, `PanelBackground`, `PanelText`, `SplitterBackground`, `ListBackground`, `ThumbnailBackground`, `VideoOverlayBackground`, `VideoIconForeground`, `FilenameForeground`, `CaptionForeground`) plus four `SystemColors` ListBox-selection key overrides. The colorful themes (SlateBlue, Forest, Sunset, Amethyst, Teal) additionally override `SystemColors.MenuBrushKey/MenuTextBrushKey/MenuHighlightBrushKey/MenuBarBrushKey` so context menus adopt the palette.
 
