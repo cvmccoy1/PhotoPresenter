@@ -2,13 +2,15 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PhotoPresenter.Models;
+using PhotoPresenter.Services;
 
 namespace PhotoPresenter.ViewModels;
 
 public partial class PhotoItemViewModel : ObservableObject
 {
-    // Limits concurrent thumbnail decodes so Present mode can always get a thread pool thread.
-    internal static readonly SemaphoreSlim ThumbSemaphore = new(6, 6);
+    // Scales with core count; Present mode only ever needs 1-2 threads at a time.
+    private static readonly int _thumbConcurrency = Math.Max(Environment.ProcessorCount - 2, 4);
+    internal static readonly SemaphoreSlim ThumbSemaphore = new(_thumbConcurrency, _thumbConcurrency);
 
     public PhotoItem Model { get; }
     public string FileName => Model.FileName;
@@ -30,12 +32,21 @@ public partial class PhotoItemViewModel : ObservableObject
     partial void OnCaptionChanged(string value)  => Model.Caption  = value;
 
     private bool _toolTipLoaded;
+    private bool _thumbnailRequested;
 
     public PhotoItemViewModel(PhotoItem model)
     {
-        Model    = model;
+        Model      = model;
         _isRemoved = model.IsRemoved;
         _caption   = model.Caption;
+        // Thumbnails are loaded on demand via EnsureThumbnailLoaded().
+    }
+
+    // Called by PhotoFolderViewModel.LoadPhotoThumbnails() when a folder is selected.
+    public void EnsureThumbnailLoaded()
+    {
+        if (_thumbnailRequested || Thumbnail != null) return;
+        _thumbnailRequested = true;
         _ = LoadThumbnailAsync();
     }
 
@@ -45,9 +56,9 @@ public partial class PhotoItemViewModel : ObservableObject
         _toolTipLoaded = true;
 
         var fi = new FileInfo(Model.FullPath);
-        string ext  = Path.GetExtension(Model.FileName).ToUpperInvariant();
-        string date = Model.CreationDate == default ? "Unknown" : Model.CreationDate.ToString("yyyy-MM-dd h:mm tt");
-        string size = FormatSize(fi.Exists ? fi.Length : 0);
+        string ext    = Path.GetExtension(Model.FileName).ToUpperInvariant();
+        string date   = Model.CreationDate == default ? "Unknown" : Model.CreationDate.ToString("yyyy-MM-dd h:mm tt");
+        string size   = FormatSize(fi.Exists ? fi.Length : 0);
         string detail = IsVideo ? "Length: …" : "Dimensions: …";
 
         ToolTipText = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
@@ -98,7 +109,7 @@ public partial class PhotoItemViewModel : ObservableObject
             dynamic shell  = Activator.CreateInstance(shellType)!;
             dynamic folder = shell.NameSpace(System.IO.Path.GetDirectoryName(path));
             dynamic item   = folder.ParseName(System.IO.Path.GetFileName(path));
-            string dur = folder.GetDetailsOf(item, 27); // column 27 = Duration
+            string dur = folder.GetDetailsOf(item, 27);
             return string.IsNullOrWhiteSpace(dur) ? "Unknown" : dur.Trim();
         }
         catch { return "Unknown"; }
@@ -117,16 +128,18 @@ public partial class PhotoItemViewModel : ObservableObject
         if (Model.IsVideo || !File.Exists(Model.FullPath)) return;
         try
         {
+            // Check cache before acquiring the semaphore — hits are pure disk reads.
+            var cached = await Task.Run(() => ThumbnailCache.TryGet(Model.FullPath));
+            if (cached != null) { Thumbnail = cached; return; }
+
             await ThumbSemaphore.WaitAsync();
             try
             {
                 var bmp = await Task.Run(() => LoadBitmap(Model.FullPath, 150));
                 Thumbnail = bmp;
+                _ = Task.Run(() => ThumbnailCache.Save(Model.FullPath, bmp));
             }
-            finally
-            {
-                ThumbSemaphore.Release();
-            }
+            finally { ThumbSemaphore.Release(); }
         }
         catch { }
     }
@@ -143,7 +156,7 @@ public partial class PhotoItemViewModel : ObservableObject
         var bmp = new BitmapImage();
         bmp.BeginInit();
         bmp.StreamSource = stream;
-        bmp.CacheOption = BitmapCacheOption.OnLoad;
+        bmp.CacheOption  = BitmapCacheOption.OnLoad;
         bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
         if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
         bmp.EndInit();
@@ -151,7 +164,6 @@ public partial class PhotoItemViewModel : ObservableObject
         return bmp;
     }
 
-    // Used for formats whose WIC codec may not honour DecodePixelWidth (e.g. HEIC).
     private static BitmapSource LoadViaDecoder(Stream stream, int decodeWidth)
     {
         var decoder = BitmapDecoder.Create(stream,

@@ -181,7 +181,11 @@ public partial class OrganiseViewModel : ObservableObject
         _library = library;
     }
 
-    partial void OnSelectedFolderChanged(PhotoFolderViewModel? value) => SelectedPhoto = null;
+    partial void OnSelectedFolderChanged(PhotoFolderViewModel? value)
+    {
+        SelectedPhoto = null;
+        value?.LoadPhotoThumbnails();
+    }
 
     public async Task LoadAsync(string parentPath)
     {

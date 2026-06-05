@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PhotoPresenter.Models;
+using PhotoPresenter.Services;
 
 namespace PhotoPresenter.ViewModels;
 
@@ -35,7 +36,7 @@ public partial class PhotoFolderViewModel : ObservableObject
 
     public PhotoFolderViewModel(PhotoFolder model)
     {
-        Model = model;
+        Model      = model;
         _isRemoved = model.IsRemoved;
 
         // model.Photos is ordered: active first, then removed at end.
@@ -47,29 +48,37 @@ public partial class PhotoFolderViewModel : ObservableObject
                 Photos.Add(vm);
         }
 
-        // Thumbnail from first active non-video photo; fall back to any active or any photo.
+        // Folder card thumbnail — fires immediately; only ~40 folders so cost is negligible.
         var thumbPath = model.Photos.FirstOrDefault(p => !p.IsRemoved && !p.IsVideo)?.FullPath
                      ?? model.Photos.FirstOrDefault(p => !p.IsRemoved)?.FullPath
                      ?? model.Photos.FirstOrDefault()?.FullPath;
         if (thumbPath != null)
-            _ = LoadThumbnailAsync(thumbPath);
+            _ = LoadFolderThumbnailAsync(thumbPath);
     }
 
-    private async Task LoadThumbnailAsync(string path)
+    // Called by OrganiseViewModel when this folder is selected.
+    public void LoadPhotoThumbnails()
+    {
+        foreach (var photo in AllPhotoItems)
+            photo.EnsureThumbnailLoaded();
+    }
+
+    private async Task LoadFolderThumbnailAsync(string path)
     {
         if (!File.Exists(path)) return;
         try
         {
+            var cached = await Task.Run(() => ThumbnailCache.TryGet(path + "|80"));
+            if (cached != null) { Thumbnail = cached; return; }
+
             await PhotoItemViewModel.ThumbSemaphore.WaitAsync();
             try
             {
                 var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 80));
                 Thumbnail = bmp;
+                _ = Task.Run(() => ThumbnailCache.Save(path + "|80", bmp));
             }
-            finally
-            {
-                PhotoItemViewModel.ThumbSemaphore.Release();
-            }
+            finally { PhotoItemViewModel.ThumbSemaphore.Release(); }
         }
         catch { }
     }
