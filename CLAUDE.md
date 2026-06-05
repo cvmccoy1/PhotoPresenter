@@ -15,7 +15,7 @@ dotnet run --project PhotoPresenter/PhotoPresenter.csproj
 start PhotoPresenter.sln
 ```
 
-The project targets `net8.0-windows` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`.
+The project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`. The `10.0.19041.0` minimum is required for the WinRT `VideoProperties` API used for auto video rotation — do not lower it.
 
 ## Architecture
 
@@ -68,6 +68,12 @@ Handled in `MainWindow.Window_PreviewKeyDown`: `Right`/`Space` = next, `Left` = 
 ### Drag-and-drop
 
 `OrganiseView.xaml.cs` implements WPF D&D for both lists (`PreviewMouseMove` → `DragDrop.DoDragDrop`; `Drop` → `OrganiseViewModel.ReorderFolders/ReorderPhotos`). The sidecar JSON is rewritten immediately after every reorder. Multi-selection drag uses a deferred-selection pattern: `PreviewMouseLeftButtonDown` suppresses the event (`e.Handled = true`) when clicking an already-selected item in a multi-selection, and `PreviewMouseLeftButtonUp` resolves it to a single selection only if no drag started.
+
+`_folderDragCanStart` / `_photoDragCanStart` bool flags guard against accidental D&D triggered by scrollbar or empty-space clicks. The flags are set `true` only when `PreviewMouseLeftButtonDown` hits a `ListBoxItem`; `PreviewMouseMove` returns immediately if the flag is `false`, suppressing both the insertion-marker adorner and the drop.
+
+### Open Folder in Explorer
+
+Both pane context menus expose **Open Folder in Explorer** (added at the bottom after a separator). Folders pane: enabled only for a single-folder selection; `FolderTile_ContextMenuOpening` sets `IsEnabled=false` on `FolderOpenExplorer` when 2+ folders are selected. Photos/Videos pane: always enabled. `PhotoOpenExplorer_Click` dispatches to three paths based on the selection count: 0 selected → `explorer.exe "folderPath"`; 1 selected → `explorer.exe /select,"filePath"`; 2+ selected → `SHOpenFolderAndSelectItems` (shell32 P/Invoke, with plain folder-open as fallback). PIDs from `SHParseDisplayName` are freed via `CoTaskMemFree` in a `finally` block.
 
 ## Global usings
 
