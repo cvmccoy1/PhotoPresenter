@@ -36,7 +36,7 @@ WPF MVVM app with two modes — **Organise** and **Present** — wired via a Dat
 
 ### Session persistence
 
-`UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name, matched case-insensitively on restore), window bounds, `WindowMaximized`, and `SplitterPosition`. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point for all of these — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds the window bounds and `LastSelectedFolder` before writing. On startup, `MainViewModel` passes `LastSelectedFolder` to `OrganiseViewModel.LoadAsync`, which selects the matching folder after loading or falls back to the first folder if not found.
+`UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name), `LastSelectedPhoto` (filename), window bounds, `WindowMaximized`, and `SplitterPosition`. All names are matched case-insensitively on restore. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds window bounds, `LastSelectedFolder`, and `LastSelectedPhoto` before writing. On startup, `MainViewModel` passes both saved names to `OrganiseViewModel.LoadAsync`, which restores the folder first (falling back to the first folder if not found), then restores the photo within that folder's active `Photos` collection (falling back to no selection if not found). `OnSelectedFolderChanged` resets `SelectedPhoto` to null synchronously, so the photo assignment in `LoadAsync` runs after that reset.
 
 ### Sidecar file format
 
