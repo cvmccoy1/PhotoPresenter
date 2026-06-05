@@ -30,8 +30,9 @@ public partial class OrganiseView : UserControl
     private bool _folderDragCanStart;
     private bool _photoDragCanStart;
 
-    // Scroll offset to restore on first folder load; -1 means no restore pending.
-    private double _pendingScrollOffset = -1;
+    // Scroll offsets to restore on first load; -1 means no restore pending.
+    private double _pendingPhotoScrollOffset = -1;
+    private double _pendingFolderScrollOffset = -1;
 
     public OrganiseView()
     {
@@ -48,7 +49,8 @@ public partial class OrganiseView : UserControl
         if (settings.SplitterPosition.HasValue && settings.SplitterPosition.Value >= FolderColumn.MinWidth)
             FolderColumn.Width = new GridLength(settings.SplitterPosition.Value);
 
-        _pendingScrollOffset = settings.PhotoScrollOffset;
+        _pendingPhotoScrollOffset  = settings.PhotoScrollOffset;
+        _pendingFolderScrollOffset = settings.FolderScrollOffset;
 
         if (Window.GetWindow(this) is Window win)
             win.Closing += OnWindowClosing;
@@ -59,32 +61,49 @@ public partial class OrganiseView : UserControl
 
             // LoadAsync may have already completed before OnLoaded fired (small libraries).
             if (vm.SelectedFolder != null)
-                ScheduleScrollRestore();
+            {
+                SchedulePhotoScrollRestore();
+                ScheduleFolderScrollRestore();
+            }
         }
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(OrganiseViewModel.SelectedFolder))
-            ScheduleScrollRestore();
+        {
+            SchedulePhotoScrollRestore();
+            ScheduleFolderScrollRestore();
+        }
     }
 
-    private void ScheduleScrollRestore()
+    private void SchedulePhotoScrollRestore()
     {
-        if (_pendingScrollOffset < 0) return;
-        var offset = _pendingScrollOffset;
-        _pendingScrollOffset = -1;
+        if (_pendingPhotoScrollOffset < 0) return;
+        var offset = _pendingPhotoScrollOffset;
+        _pendingPhotoScrollOffset = -1;
         Dispatcher.InvokeAsync(
             () => GetPhotoScrollViewer()?.ScrollToVerticalOffset(offset),
             DispatcherPriority.Background);
     }
 
+    private void ScheduleFolderScrollRestore()
+    {
+        if (_pendingFolderScrollOffset < 0) return;
+        var offset = _pendingFolderScrollOffset;
+        _pendingFolderScrollOffset = -1;
+        Dispatcher.InvokeAsync(
+            () => GetFolderScrollViewer()?.ScrollToVerticalOffset(offset),
+            DispatcherPriority.Background);
+    }
+
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        var sv = GetPhotoScrollViewer();
-        if (sv == null) return;
         var settings = UserSettings.Load();
-        settings.PhotoScrollOffset = sv.VerticalOffset;
+        var photoSv  = GetPhotoScrollViewer();
+        var folderSv = GetFolderScrollViewer();
+        if (photoSv  != null) settings.PhotoScrollOffset  = photoSv.VerticalOffset;
+        if (folderSv != null) settings.FolderScrollOffset = folderSv.VerticalOffset;
         settings.Save();
     }
 
@@ -92,6 +111,14 @@ public partial class OrganiseView : UserControl
     {
         if (VisualTreeHelper.GetChildrenCount(PhotoList) == 0) return null;
         var child0 = VisualTreeHelper.GetChild(PhotoList, 0);
+        if (VisualTreeHelper.GetChildrenCount(child0) == 0) return null;
+        return VisualTreeHelper.GetChild(child0, 0) as ScrollViewer;
+    }
+
+    private ScrollViewer? GetFolderScrollViewer()
+    {
+        if (VisualTreeHelper.GetChildrenCount(FolderList) == 0) return null;
+        var child0 = VisualTreeHelper.GetChild(FolderList, 0);
         if (VisualTreeHelper.GetChildrenCount(child0) == 0) return null;
         return VisualTreeHelper.GetChild(child0, 0) as ScrollViewer;
     }
