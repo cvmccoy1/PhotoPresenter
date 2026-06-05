@@ -25,7 +25,9 @@ public partial class MainWindow : Window
         _settings = UserSettings.Load();
         RestoreWindowBounds();
         InitThemeComboBox();
+        InitTextComboBox();
         ThemeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
+        TextComboBox.SelectionChanged  += TextComboBox_SelectionChanged;
     }
 
     private void InitThemeComboBox()
@@ -38,13 +40,33 @@ public partial class MainWindow : Window
         ThemeComboBox.SelectedIndex = 0;
     }
 
+    private void InitTextComboBox()
+    {
+        var size = _settings.TextSize ?? "Normal";
+        foreach (ComboBoxItem item in TextComboBox.Items)
+        {
+            if ((string)item.Tag == size) { TextComboBox.SelectedItem = item; return; }
+        }
+        TextComboBox.SelectedIndex = 1;
+    }
+
     private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ThemeComboBox.SelectedItem is not ComboBoxItem item) return;
         var themeName = (string)item.Tag;
-        ThemeService.Apply(themeName);
+        ThemeService.ApplyColor(themeName);
         var settings = UserSettings.Load();
         settings.Theme = themeName;
+        settings.Save();
+    }
+
+    private void TextComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TextComboBox.SelectedItem is not ComboBoxItem item) return;
+        var textSize = (string)item.Tag;
+        ThemeService.ApplyTextSize(textSize);
+        var settings = UserSettings.Load();
+        settings.TextSize = textSize;
         settings.Save();
     }
 
@@ -91,6 +113,8 @@ public partial class MainWindow : Window
         settings.Volume             = _vm.PresentVM.Volume;
         if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
             settings.Theme = (string)themeItem.Tag;
+        if (TextComboBox.SelectedItem is ComboBoxItem textItem)
+            settings.TextSize = (string)textItem.Tag;
         settings.Save();
     }
 
