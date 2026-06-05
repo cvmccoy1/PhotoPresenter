@@ -9,6 +9,8 @@ public class UserSettings
     public string LastSelectedPhoto { get; set; } = "";
     public double PhotoScrollOffset { get; set; } = 0;
     public double FolderScrollOffset { get; set; } = 0;
+    public bool ShowAllFolders { get; set; } = false;
+    public bool ShowAllPhotos { get; set; } = false;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
     public double? WindowWidth { get; set; }

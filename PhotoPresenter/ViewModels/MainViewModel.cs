@@ -33,6 +33,8 @@ public partial class MainViewModel : ObservableObject
             ParentFolderPath = settings.LastParentFolder;
             _ = OrganiseVM.LoadAsync(settings.LastParentFolder, settings.LastSelectedFolder, settings.LastSelectedPhoto);
         }
+        OrganiseVM.ShowAllFolders = settings.ShowAllFolders;
+        OrganiseVM.ShowAllPhotos  = settings.ShowAllPhotos;
     }
 
     [RelayCommand]
