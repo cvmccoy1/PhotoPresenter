@@ -23,4 +23,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="app.ico"/>
+  </ItemGroup>
+
 </Project>
