@@ -17,6 +17,8 @@ start PhotoPresenter.sln
 
 The project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`. The `10.0.19041.0` minimum is required for the WinRT `VideoProperties` API used for auto video rotation — do not lower it.
 
+A `WriteBuildDate` MSBuild target (in `.csproj`) runs before `CoreCompile` and injects the UTC build date (formatted `MM-dd-yyyy`) as an `AssemblyMetadataAttribute` with key `"BuildDate"`. `AboutWindow.xaml.cs` reads it at runtime via `Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()` and displays it as `"Version X.Y.Z  (built MM-dd-yyyy)"`. No extra packages or generated files are involved — the attribute is emitted directly into the compiled assembly.
+
 ## Architecture
 
 WPF MVVM app with two modes — **Organise** and **Present** — wired via a DataTemplate dispatch pattern in `App.xaml`. There is no navigation framework; `MainWindow` hosts a single `ContentControl` whose content switches between `OrganiseViewModel` and `PresentViewModel` instances, and WPF automatically applies the matching `DataTemplate` (defined without `x:Key` in `App.xaml.Resources`).
