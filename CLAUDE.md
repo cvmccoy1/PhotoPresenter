@@ -17,7 +17,7 @@ start PhotoPresenter.sln
 
 The project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`. The `10.0.19041.0` minimum is required for the WinRT `VideoProperties` API used for auto video rotation — do not lower it.
 
-A `WriteBuildDate` MSBuild target (in `.csproj`) runs before `CoreCompile` and injects the UTC build date (formatted `MM-dd-yyyy`) as an `AssemblyMetadataAttribute` with key `"BuildDate"`. `AboutWindow.xaml.cs` reads it at runtime via `Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()` and displays it as `"Version X.Y.Z  (built MM-dd-yyyy)"`. No extra packages or generated files are involved — the attribute is emitted directly into the compiled assembly.
+The UTC build date (formatted `MM-dd-yyyy`) is embedded as an `AssemblyMetadataAttribute` with key `"BuildDate"` via a top-level `PropertyGroup` + `ItemGroup` in `.csproj`. These must be at the **top level** (not inside a `<Target>`): `GenerateAssemblyInfo` collects `AssemblyAttribute` items during MSBuild's evaluation phase; items added dynamically inside a target run too late and are ignored. `AboutWindow.xaml.cs` reads the attribute at runtime via `Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()` and displays `"Version X.Y.Z  (built MM-dd-yyyy)"`. No extra packages or generated files are involved.
 
 ## Architecture
 
