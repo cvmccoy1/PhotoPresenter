@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <BuildDate>$([System.DateTime]::UtcNow.ToString("MM-dd-yyyy"))</BuildDate>
+    <BuildDate>$([System.DateTime]::Now.ToString("M-d-yyyy"))</BuildDate>
   </PropertyGroup>
 
   <ItemGroup>

@@ -23,6 +23,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - Hover over a folder to see a tooltip showing the number of photos, videos, and total items in that folder
 - Right-click any photo or video and choose **Open** to open it in its default app, or **Open With…** to choose another app; double-clicking a tile does the same as **Open**
 - Hover over any photo or video tile to see a tooltip showing its type, date, dimensions (photos) or length (videos), and file size
+- Right-click any photo or video and choose **Mirror** to horizontally flip it; right-click again and choose **Remove Mirror** to restore it; with a multi-selection, each item toggles independently — if states are mixed, both **Mirror** and **Remove Mirror** appear and apply only to the applicable items; the flip is shown on the thumbnail in Organise mode (photos) and applied during Present mode for both photos and videos; mirror state is saved to the sidecar and covered by undo
 - Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**; with a multi-selection, these become **Set Caption** (writes the same caption to all selected items) and **Delete Caption** (removes captions from all that have one)
   - Press **Shift+Enter** in the caption dialog to insert a line break; the text box grows as lines are added
   - Multi-line captions are displayed centered in both Organise mode (below the thumbnail) and Present mode (overlaid at the bottom of the screen)
