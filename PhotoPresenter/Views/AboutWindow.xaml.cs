@@ -11,7 +11,9 @@ public partial class AboutWindow : Window
 
         var asm = Assembly.GetExecutingAssembly();
         var version = asm.GetName().Version;
-        VersionText.Text = $"Version {version?.Major}.{version?.Minor}.{version?.Build}";
+        var buildDate = asm.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "BuildDate")?.Value ?? "";
+        VersionText.Text = $"Version {version?.Major}.{version?.Minor}.{version?.Build}  (built {buildDate})";
 
         var copyright = asm.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright ?? "";
         CopyrightText.Text = copyright;
