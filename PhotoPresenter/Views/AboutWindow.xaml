@@ -14,7 +14,7 @@
         <TextBlock x:Name="VersionText"
                    FontSize="13" Foreground="#555"
                    Margin="0,0,0,12"/>
-        <TextBlock Text="A simple fullscreen photo presenter for family photo libraries."
+        <TextBlock Text="A simple fullscreen photo and video presenter for family photo libraries."
                    FontSize="12" Foreground="#444"
                    TextWrapping="Wrap"
                    Margin="0,0,0,16"/>
