@@ -30,6 +30,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, and caption changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
 - Thumbnails load on demand: folder-card thumbnails (left pane) load immediately on launch; photo thumbnails load when you click a folder, keeping startup fast even with thousands of files; decoded thumbnails are cached in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` so subsequent visits are near-instant
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
+- The app watches for external changes while it is running: if you rename a subfolder in Explorer, the new name appears immediately and the saved order is updated automatically; if a subfolder or photo is deleted externally, it is removed from the list and a brief notice appears; new photos copied into the selected folder appear automatically
 - Click a folder (and optionally an item) before switching to Present mode to start from that point; press **F5** (or click **▶ Present**) to enter Present mode
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
 - Choose a **color theme** and **text size** independently from the toolbar dropdowns; both are remembered between sessions and take effect immediately without a restart
@@ -90,6 +91,18 @@ Captions are stored in each subfolder's `_photoorder.json` sidecar under a `capt
 
 ### Removing and restoring items
 Removing a folder or photo from the presentation adds its name to the `removed` list in the relevant sidecar file. It will be excluded from Organise and Present modes on the next launch. Tick **Show All** to see removed items and restore them individually at any time.
+
+### External changes while the app is running
+The app uses `FileSystemWatcher` to detect changes made outside the app while it is open:
+
+| Change | What happens |
+|--------|-------------|
+| Subfolder renamed | Name updates live in the Folders pane; saved order is updated to match |
+| Subfolder deleted | Folder disappears from the list; a brief notice appears at the top of the screen |
+| New subfolder created | Appears at the bottom of the Folders pane |
+| Photo or video added to the selected folder | Tile appears automatically |
+| Photo or video deleted from the selected folder | Tile disappears |
+| Photo or video renamed in the selected folder | Filename updates in place |
 
 ### Supported formats
 **Photos:** JPG, JPEG, PNG, BMP, GIF, TIFF, HEIC, HEIF

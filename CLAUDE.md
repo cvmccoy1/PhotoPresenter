@@ -111,6 +111,19 @@ Context menu: "Mirror" (tag `Mirror`) is shown when `IsMirrored=False`; "Remove 
 
 Persistence: stored in `_photoorder.json` under a `"mirrored"` key (list of filenames); the key is omitted entirely when no items are mirrored. `PhotoOrderSidecar.Mirrored` is `List<string>?`; `PhotoLibraryService.ToPhotoItem` accepts a `HashSet<string>? mirrored` and sets `IsMirrored` on load. Tooltip resets (`_toolTipLoaded = false`) in `OnIsMirroredChanged` so "Mirrored: Yes" appears on next hover; not shown when `IsMirrored` is false.
 
+### Live file system sync
+
+`OrganiseViewModel` owns two `FileSystemWatcher` instances:
+
+- `_parentWatcher` — watches the parent folder with `NotifyFilter = NotifyFilters.DirectoryName`, `IncludeSubdirectories = false`. Handles subfolder `Renamed` (updates `PhotoFolderViewModel` name/paths via `UpdatePath`, rewrites the sidecar to the new path, redirects `_folderWatcher` if the renamed folder is the selected one), `Deleted` (removes the VM from both `_allFolderItems` and `Folders`, shows a 5-second amber status banner), and `Created` (waits 150 ms, verifies `Directory.Exists`, adds a new `PhotoFolderViewModel` at the end of the active section).
+- `_folderWatcher` — watches the currently selected subfolder with `NotifyFilter = NotifyFilters.FileName`. Handles file `Created` (waits 150 ms, verifies `File.Exists`, checks media extension via `PhotoLibraryService.IsMediaFile`, adds a new `PhotoItemViewModel`), `Deleted` (removes the VM), and `Renamed` (calls `UpdatePath` on the matching VM).
+
+All FSW callbacks arrive on a thread-pool thread and dispatch to the UI thread via `Application.Current.Dispatcher.InvokeAsync`. `UpdateFolderWatcher(string?)` is called from `OnSelectedFolderChanged`; `StartParentWatcher(string)` is called at the end of `LoadAsync`. `OrganiseViewModel` implements `IDisposable`; `Window_Closing` in `MainWindow.xaml.cs` calls `Dispose()` before saving settings.
+
+`PhotoFolderViewModel.UpdatePath(newName, newFullPath)` updates `Model.Name`, `Model.FullPath`, cascades to all child `PhotoItemViewModel`s, and raises `PropertyChanged` for `Name`, `FullPath`, and `FolderToolTipText`. `PhotoItemViewModel.UpdatePath(newFileName, newFullPath)` updates `Model.FileName`, `Model.FullPath`, and raises `PropertyChanged` for both.
+
+`SaveAllPhotoOrder` and `SaveAllFolderOrder` are wrapped in `catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)` — on failure they call `ShowStatus(message)` which sets `StatusMessage` and starts a `DispatcherTimer` to clear it after 5 seconds. The amber status banner in `OrganiseView.xaml` (docked above the two-pane area) is bound to `HasStatusMessage` via `BooleanToVisibilityConverter` (`x:Key="BoolToVis"` in `App.xaml`); a dismiss button (✕) sets `StatusMessage = null`.
+
 ### Captions
 
 `CaptionDialog` (`Views/CaptionDialog.xaml`) uses `AcceptsReturn="True"` with a `MaxHeight` so the TextBox grows as lines are added then scrolls. Plain Enter submits the dialog; Shift+Enter inserts a newline (the `KeyDown` handler checks `Keyboard.Modifiers` for Shift before treating Enter as OK). `NormalizeCaption` normalises `\r\n` to `\n` and trims surrounding whitespace before the caption is stored. Caption TextBlocks in both the Organise tile (`TextWrapping="Wrap"`, `TextAlignment="Center"`) and the Present mode overlay (`TextWrapping="Wrap"`, `TextAlignment="Center"`) render newlines naturally from the stored `\n` characters.
