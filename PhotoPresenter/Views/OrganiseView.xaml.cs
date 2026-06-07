@@ -132,6 +132,11 @@ public partial class OrganiseView : UserControl
 
     private OrganiseViewModel? Vm => DataContext as OrganiseViewModel;
 
+    private void DismissStatus_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm != null) Vm.StatusMessage = null;
+    }
+
     // ── Folder list ────────────────────────────────────────────────────────────
 
     private void FolderList_KeyDown(object sender, KeyEventArgs e)

@@ -16,6 +16,9 @@ public class PhotoLibraryService : IPhotoLibraryService
     private static readonly HashSet<string> MediaExtensions =
         new(PhotoExtensions.Concat(VideoExtensions), StringComparer.OrdinalIgnoreCase);
 
+    internal static bool IsMediaFile(string path) => MediaExtensions.Contains(Path.GetExtension(path));
+    internal static bool IsVideoFile(string path) => VideoExtensions.Contains(Path.GetExtension(path));
+
     private const string FolderOrderFile = "_photofolderorder.json";
     private const string PhotoOrderFile  = "_photoorder.json";
 

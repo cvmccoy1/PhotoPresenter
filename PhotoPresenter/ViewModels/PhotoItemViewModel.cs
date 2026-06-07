@@ -40,6 +40,14 @@ public partial class PhotoItemViewModel : ObservableObject
     private bool _toolTipLoaded;
     private bool _thumbnailRequested;
 
+    public void UpdatePath(string newFileName, string newFullPath)
+    {
+        Model.FileName = newFileName;
+        Model.FullPath = newFullPath;
+        OnPropertyChanged(nameof(FileName));
+        OnPropertyChanged(nameof(FullPath));
+    }
+
     public PhotoItemViewModel(PhotoItem model)
     {
         Model       = model;

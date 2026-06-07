@@ -56,6 +56,17 @@ public partial class PhotoFolderViewModel : ObservableObject
             _ = LoadFolderThumbnailAsync(thumbPath);
     }
 
+    public void UpdatePath(string newName, string newFullPath)
+    {
+        Model.Name = newName;
+        Model.FullPath = newFullPath;
+        foreach (var p in AllPhotoItems)
+            p.UpdatePath(p.Model.FileName, Path.Combine(newFullPath, p.Model.FileName));
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(FullPath));
+        OnPropertyChanged(nameof(FolderToolTipText));
+    }
+
     // Called by OrganiseViewModel when this folder is selected.
     public void LoadPhotoThumbnails()
     {

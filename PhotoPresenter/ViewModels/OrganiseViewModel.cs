@@ -1,12 +1,25 @@
 using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PhotoPresenter.Models;
 using PhotoPresenter.Services;
 
 namespace PhotoPresenter.ViewModels;
 
-public partial class OrganiseViewModel : ObservableObject
+public partial class OrganiseViewModel : ObservableObject, IDisposable
 {
     private readonly IPhotoLibraryService _library;
+
+    private FileSystemWatcher? _parentWatcher;
+    private FileSystemWatcher? _folderWatcher;
+    private DispatcherTimer?   _statusTimer;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
+    private string? _statusMessage;
+
+    public bool HasStatusMessage => StatusMessage != null;
 
     // Parallel collection that contains ALL folders (active first, removed at end).
     private readonly ObservableCollection<PhotoFolderViewModel> _allFolderItems = new();
@@ -182,10 +195,168 @@ public partial class OrganiseViewModel : ObservableObject
         _library = library;
     }
 
+    public void Dispose()
+    {
+        _parentWatcher?.Dispose();
+        _folderWatcher?.Dispose();
+        _statusTimer?.Stop();
+    }
+
+    private void ShowStatus(string message)
+    {
+        StatusMessage = message;
+        _statusTimer?.Stop();
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _statusTimer.Tick += (_, _) => { StatusMessage = null; _statusTimer.Stop(); };
+        _statusTimer.Start();
+    }
+
+    private void StartParentWatcher(string parentPath)
+    {
+        _parentWatcher?.Dispose();
+        if (!Directory.Exists(parentPath)) return;
+        _parentWatcher = new FileSystemWatcher(parentPath)
+        {
+            NotifyFilter = NotifyFilters.DirectoryName,
+            Filter = "*",
+            IncludeSubdirectories = false,
+            EnableRaisingEvents = true
+        };
+        _parentWatcher.Renamed += OnSubfolderRenamed;
+        _parentWatcher.Deleted += OnSubfolderDeleted;
+        _parentWatcher.Created += OnSubfolderCreated;
+    }
+
+    private void UpdateFolderWatcher(string? folderPath)
+    {
+        _folderWatcher?.Dispose();
+        _folderWatcher = null;
+        if (folderPath == null || !Directory.Exists(folderPath)) return;
+        _folderWatcher = new FileSystemWatcher(folderPath)
+        {
+            NotifyFilter = NotifyFilters.FileName,
+            Filter = "*",
+            IncludeSubdirectories = false,
+            EnableRaisingEvents = true
+        };
+        _folderWatcher.Created += OnFolderFileCreated;
+        _folderWatcher.Deleted += OnFolderFileDeleted;
+        _folderWatcher.Renamed += OnFolderFileRenamed;
+    }
+
+    // ── FileSystemWatcher event handlers ───────────────────────────────────────
+
+    private void OnSubfolderRenamed(object sender, RenamedEventArgs e)
+    {
+        Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var vm = _allFolderItems.FirstOrDefault(f => f.FullPath == e.OldFullPath);
+            if (vm == null) return;
+            vm.UpdatePath(e.Name ?? Path.GetFileName(e.FullPath), e.FullPath);
+            if (SelectedFolder == vm)
+                UpdateFolderWatcher(e.FullPath);
+            SaveAllFolderOrder();
+        });
+    }
+
+    private void OnSubfolderDeleted(object sender, FileSystemEventArgs e)
+    {
+        Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var vm = _allFolderItems.FirstOrDefault(f => f.FullPath == e.FullPath);
+            if (vm == null) return;
+            var name = vm.Name;
+            if (SelectedFolder == vm)
+            {
+                SelectedFolder = null;
+                UpdateFolderWatcher(null);
+            }
+            Folders.Remove(vm);
+            _allFolderItems.Remove(vm);
+            ShowStatus($"Folder \"{name}\" was deleted externally and removed from the list.");
+            SaveAllFolderOrder();
+            OnPropertyChanged(nameof(FolderCountLabel));
+        });
+    }
+
+    private void OnSubfolderCreated(object sender, FileSystemEventArgs e)
+    {
+        Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            await Task.Delay(150);
+            if (!Directory.Exists(e.FullPath)) return;
+            if (_allFolderItems.Any(f => f.FullPath == e.FullPath)) return;
+            var folder = new PhotoFolder { Name = e.Name ?? Path.GetFileName(e.FullPath), FullPath = e.FullPath };
+            var vm = new PhotoFolderViewModel(folder);
+            int insertAt = Folders.Count;
+            Folders.Add(vm);
+            _allFolderItems.Insert(insertAt, vm);
+            SaveAllFolderOrder();
+            OnPropertyChanged(nameof(FolderCountLabel));
+        });
+    }
+
+    private void OnFolderFileCreated(object sender, FileSystemEventArgs e)
+    {
+        if (!PhotoLibraryService.IsMediaFile(e.FullPath)) return;
+        var watchedPath = (sender as FileSystemWatcher)?.Path;
+        Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            await Task.Delay(150);
+            if (!File.Exists(e.FullPath)) return;
+            var folder = SelectedFolder;
+            if (folder == null || folder.FullPath != watchedPath) return;
+            if (folder.AllPhotoItems.Any(p => p.FullPath == e.FullPath)) return;
+            var item = new PhotoItem
+            {
+                FileName     = e.Name ?? Path.GetFileName(e.FullPath),
+                FullPath     = e.FullPath,
+                CreationDate = File.GetCreationTime(e.FullPath),
+                IsVideo      = PhotoLibraryService.IsVideoFile(e.FullPath)
+            };
+            var vm = new PhotoItemViewModel(item);
+            folder.AllPhotoItems.Add(vm);
+            folder.Photos.Add(vm);
+            OnPropertyChanged(nameof(PhotoCountLabel));
+            OnPropertyChanged(nameof(FolderCountLabel));
+        });
+    }
+
+    private void OnFolderFileDeleted(object sender, FileSystemEventArgs e)
+    {
+        var watchedPath = (sender as FileSystemWatcher)?.Path;
+        Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var folder = SelectedFolder;
+            if (folder == null || folder.FullPath != watchedPath) return;
+            var vm = folder.AllPhotoItems.FirstOrDefault(p => p.FullPath == e.FullPath);
+            if (vm == null) return;
+            if (SelectedPhoto == vm) SelectedPhoto = null;
+            folder.AllPhotoItems.Remove(vm);
+            folder.Photos.Remove(vm);
+            OnPropertyChanged(nameof(PhotoCountLabel));
+            OnPropertyChanged(nameof(FolderCountLabel));
+        });
+    }
+
+    private void OnFolderFileRenamed(object sender, RenamedEventArgs e)
+    {
+        var watchedPath = (sender as FileSystemWatcher)?.Path;
+        Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var folder = SelectedFolder;
+            if (folder == null || folder.FullPath != watchedPath) return;
+            var vm = folder.AllPhotoItems.FirstOrDefault(p => p.FullPath == e.OldFullPath);
+            if (vm == null) return;
+            vm.UpdatePath(e.Name ?? Path.GetFileName(e.FullPath), e.FullPath);
+        });
+    }
+
     partial void OnSelectedFolderChanged(PhotoFolderViewModel? value)
     {
         SelectedPhoto = null;
         value?.LoadPhotoThumbnails();
+        UpdateFolderWatcher(value?.FullPath);
     }
 
     public async Task LoadAsync(string parentPath, string? initialFolderName = null, string? initialPhotoName = null)
@@ -217,6 +388,8 @@ public partial class OrganiseViewModel : ObservableObject
 
         _undoStack.Clear();
         OnPropertyChanged(nameof(CanUndo));
+
+        StartParentWatcher(ParentFolderPath);
     }
 
     // ── Folder operations ──────────────────────────────────────────────────────
@@ -435,9 +608,17 @@ public partial class OrganiseViewModel : ObservableObject
 
     // ── Persistence ────────────────────────────────────────────────────────────
 
-    private void SaveAllFolderOrder() =>
-        _library.SaveFolderOrder(ParentFolderPath, _allFolderItems.Select(f => f.Model));
+    private void SaveAllFolderOrder()
+    {
+        try { _library.SaveFolderOrder(ParentFolderPath, _allFolderItems.Select(f => f.Model)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { ShowStatus("Could not save folder order — the parent folder may have been renamed or deleted."); }
+    }
 
-    private void SaveAllPhotoOrder(PhotoFolderViewModel folder) =>
-        _library.SavePhotoOrder(folder.Model, folder.AllPhotoItems.Select(p => p.Model));
+    private void SaveAllPhotoOrder(PhotoFolderViewModel folder)
+    {
+        try { _library.SavePhotoOrder(folder.Model, folder.AllPhotoItems.Select(p => p.Model)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { ShowStatus("Could not save changes — the folder may have been renamed or deleted."); }
+    }
 }

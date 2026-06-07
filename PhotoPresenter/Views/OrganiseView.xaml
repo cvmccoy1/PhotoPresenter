@@ -7,7 +7,18 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:OrganiseViewModel}"
              Background="{DynamicResource AppBackground}">
-    <Grid>
+    <DockPanel>
+        <Border DockPanel.Dock="Top"
+                Background="#FFF3CD" BorderBrush="#FFEEBA" BorderThickness="0,0,0,1"
+                Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}">
+            <DockPanel Margin="8,4">
+                <Button DockPanel.Dock="Right" Content="✕" Background="Transparent" BorderThickness="0"
+                        Padding="6,0" Click="DismissStatus_Click" Cursor="Hand"/>
+                <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                           FontSize="{DynamicResource FontSize.Small}" Foreground="#856404"/>
+            </DockPanel>
+        </Border>
+        <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="FolderColumn" Width="280" MinWidth="150"/>
             <ColumnDefinition Width="5"/>
@@ -381,5 +392,6 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </DockPanel>
-    </Grid>
+        </Grid>
+    </DockPanel>
 </UserControl>

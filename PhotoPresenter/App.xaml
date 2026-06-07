@@ -10,6 +10,7 @@
                 <ResourceDictionary Source="Themes/Light.xaml"/>
                 <ResourceDictionary Source="Themes/TextSize_Normal.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
             <DataTemplate DataType="{x:Type vm:OrganiseViewModel}">
                 <views:OrganiseView/>
             </DataTemplate>
