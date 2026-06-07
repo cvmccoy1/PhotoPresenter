@@ -94,7 +94,7 @@ public class PhotoLibraryService : IPhotoLibraryService
 
             return (ordered, removedNames);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return (subdirs.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList(), new());
         }
@@ -153,7 +153,7 @@ public class PhotoLibraryService : IPhotoLibraryService
 
             return result;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var items = files.Select(f => ToPhotoItem(f)).ToList();
             return items.OrderBy(p => p.CreationDate).ToList();
@@ -217,7 +217,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             if (DateTime.TryParse(raw, out var dt2))
                 return dt2;
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
         return null;
     }
 

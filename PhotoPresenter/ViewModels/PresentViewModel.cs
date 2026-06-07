@@ -206,7 +206,7 @@ public partial class PresentViewModel : ObservableObject
                 _ = PreloadNextAsync();
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             if (seq == _loadSequence) CurrentImage = null;
         }
@@ -226,7 +226,7 @@ public partial class PresentViewModel : ObservableObject
                 _                          => 0
             };
         }
-        catch { return 0; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return 0; }
     }
 
     private async Task PreloadNextAsync()
@@ -256,6 +256,6 @@ public partial class PresentViewModel : ObservableObject
             _preloadedFolderIndex = nextFolder;
             _preloadedPhotoIndex = nextPhoto;
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 }

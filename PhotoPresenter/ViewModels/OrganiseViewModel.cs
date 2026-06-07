@@ -58,9 +58,11 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         {
             int active  = Folders.Count;
             int removed = _allFolderItems.Count - active;
-            int photos  = Folders.Sum(f => f.Photos.Count(p => !p.IsVideo));
-            int videos  = Folders.Sum(f => f.Photos.Count(p =>  p.IsVideo));
-            int total   = photos + videos;
+            int photos = 0, videos = 0;
+            foreach (var f in Folders)
+                foreach (var p in f.Photos)
+                    if (p.IsVideo) videos++; else photos++;
+            int total = photos + videos;
 
             string folderPart = ShowAllFolders && removed > 0
                 ? $"{active + removed} folders  ({removed} removed)"
@@ -82,9 +84,10 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         get
         {
             if (SelectedFolder == null) return "";
-            int photoCount = SelectedFolder.Photos.Count(p => !p.IsVideo);
-            int videoCount = SelectedFolder.Photos.Count(p =>  p.IsVideo);
-            int total      = photoCount + videoCount;
+            int photoCount = 0, videoCount = 0;
+            foreach (var p in SelectedFolder.Photos)
+                if (p.IsVideo) videoCount++; else photoCount++;
+            int total = photoCount + videoCount;
             int removed    = SelectedFolder.AllPhotoItems.Count - total;
 
             string baseLabel;
@@ -103,7 +106,9 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     // ── Undo history ───────────────────────────────────────────────────────────
 
-    private const int MaxUndoDepth = 20;
+    private const int MaxUndoDepth          = 20;
+    private const int FswDebounceMs         = 150; // wait for OS to finish write/create
+    private const int StatusBannerDurationSec = 5;
 
     private sealed record FolderSnapshot(
         IReadOnlyList<(PhotoFolderViewModel Vm, bool IsRemoved)> Items);
@@ -206,7 +211,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     {
         StatusMessage = message;
         _statusTimer?.Stop();
-        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(StatusBannerDurationSec) };
         _statusTimer.Tick += (_, _) => { StatusMessage = null; _statusTimer.Stop(); };
         _statusTimer.Start();
     }
@@ -283,7 +288,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     {
         Application.Current.Dispatcher.InvokeAsync(async () =>
         {
-            await Task.Delay(150);
+            await Task.Delay(FswDebounceMs);
             if (!Directory.Exists(e.FullPath)) return;
             if (_allFolderItems.Any(f => f.FullPath == e.FullPath)) return;
             var folder = new PhotoFolder { Name = e.Name ?? Path.GetFileName(e.FullPath), FullPath = e.FullPath };
@@ -302,7 +307,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         var watchedPath = (sender as FileSystemWatcher)?.Path;
         Application.Current.Dispatcher.InvokeAsync(async () =>
         {
-            await Task.Delay(150);
+            await Task.Delay(FswDebounceMs);
             if (!File.Exists(e.FullPath)) return;
             var folder = SelectedFolder;
             if (folder == null || folder.FullPath != watchedPath) return;

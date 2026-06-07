@@ -10,11 +10,15 @@ internal static class ThumbnailCache
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PhotoPresenter", "thumbcache");
 
+    private static readonly CancellationTokenSource _cts = new();
+
     static ThumbnailCache()
     {
         Directory.CreateDirectory(_dir);
-        Task.Run(Cleanup);
+        Task.Run(() => Cleanup(_cts.Token));
     }
+
+    internal static void Shutdown() => _cts.Cancel();
 
     private static string KeyPath(string src)
     {
@@ -37,7 +41,7 @@ internal static class ThumbnailCache
             bmp.Freeze();
             return bmp;
         }
-        catch { return null; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
     }
 
     internal static void Save(string src, BitmapSource bmp)
@@ -49,17 +53,20 @@ internal static class ThumbnailCache
             using var s = File.Create(KeyPath(src));
             enc.Save(s);
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 
-    private static void Cleanup()
+    private static void Cleanup(CancellationToken ct)
     {
         try
         {
             var cutoff = DateTime.UtcNow.AddDays(-90);
             foreach (var f in Directory.EnumerateFiles(_dir, "*.jpg"))
+            {
+                ct.ThrowIfCancellationRequested();
                 if (File.GetLastWriteTimeUtc(f) < cutoff)
-                    try { File.Delete(f); } catch { }
+                    try { File.Delete(f); } catch (Exception ex) when (ex is not OperationCanceledException) { }
+            }
 
             // Per source-path hash, keep only the newest ticks version; delete stale ones.
             Directory.EnumerateFiles(_dir, "*.jpg")
@@ -68,8 +75,8 @@ internal static class ThumbnailCache
                 .GroupBy(x => x.Name[..x.Name.LastIndexOf('_')])
                 .SelectMany(g => g.OrderByDescending(x => x.Name).Skip(1))
                 .ToList()
-                .ForEach(x => { try { File.Delete(x.Path); } catch { } });
+                .ForEach(x => { try { File.Delete(x.Path); } catch (Exception ex) when (ex is not OperationCanceledException) { } });
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 }

@@ -24,10 +24,10 @@ public partial class PhotoFolderViewModel : ObservableObject
     {
         get
         {
-            int photos = Photos.Count(p => !p.IsVideo);
-            int videos = Photos.Count(p =>  p.IsVideo);
-            int total  = photos + videos;
-            return $"Photos: {photos}\nVideos: {videos}\nTotal:  {total}";
+            int photos = 0, videos = 0;
+            foreach (var p in Photos)
+                if (p.IsVideo) videos++; else photos++;
+            return $"Photos: {photos}\nVideos: {videos}\nTotal:  {photos + videos}";
         }
     }
 
@@ -91,6 +91,6 @@ public partial class PhotoFolderViewModel : ObservableObject
             }
             finally { PhotoItemViewModel.ThumbSemaphore.Release(); }
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 }

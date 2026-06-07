@@ -92,6 +92,7 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         _vm.OrganiseVM.Dispose();
+        ThumbnailCache.Shutdown();
 
         // Reload to pick up any mid-session saves (e.g. splitter position).
         var settings = UserSettings.Load();

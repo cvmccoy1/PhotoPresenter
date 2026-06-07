@@ -161,7 +161,7 @@ public partial class PhotoItemViewModel : ObservableObject
             }
             finally { ThumbSemaphore.Release(); }
         }
-        catch { }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 
     internal static BitmapSource LoadBitmap(string path, int decodeWidth)
