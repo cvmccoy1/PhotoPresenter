@@ -3,6 +3,8 @@ using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PhotoPresenter.Models;
 using PhotoPresenter.Services;
+using Windows.Storage;
+using Windows.Storage.FileProperties;
 
 namespace PhotoPresenter.ViewModels;
 
@@ -17,7 +19,9 @@ public partial class PhotoItemViewModel : ObservableObject
     public string FullPath => Model.FullPath;
     public bool IsVideo => Model.IsVideo;
 
-    [ObservableProperty] private ImageSource? _thumbnail;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasThumbnail))]
+    private ImageSource? _thumbnail;
     [ObservableProperty] private bool _isRemoved;
 
     [ObservableProperty]
@@ -27,7 +31,8 @@ public partial class PhotoItemViewModel : ObservableObject
     [ObservableProperty] private bool   _isMirrored;
     [ObservableProperty] private string _toolTipText = "";
 
-    public bool HasCaption => !string.IsNullOrEmpty(Caption);
+    public bool HasCaption    => !string.IsNullOrEmpty(Caption);
+    public bool HasThumbnail  => Thumbnail != null;
 
     partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
     partial void OnCaptionChanged(string value)  => Model.Caption  = value;
@@ -145,7 +150,7 @@ public partial class PhotoItemViewModel : ObservableObject
 
     private async Task LoadThumbnailAsync()
     {
-        if (Model.IsVideo || !File.Exists(Model.FullPath)) return;
+        if (!File.Exists(Model.FullPath)) return;
         try
         {
             // Check cache before acquiring the semaphore — hits are pure disk reads.
@@ -155,13 +160,46 @@ public partial class PhotoItemViewModel : ObservableObject
             await ThumbSemaphore.WaitAsync();
             try
             {
-                var bmp = await Task.Run(() => LoadBitmap(Model.FullPath, 150));
-                Thumbnail = bmp;
-                _ = Task.Run(() => ThumbnailCache.Save(Model.FullPath, bmp));
+                BitmapSource? bmp = Model.IsVideo
+                    ? await GetVideoThumbnailAsync(Model.FullPath)
+                    : await Task.Run(() => LoadBitmap(Model.FullPath, 150));
+
+                if (bmp != null)
+                {
+                    Thumbnail = bmp;
+                    _ = Task.Run(() => ThumbnailCache.Save(Model.FullPath, bmp));
+                }
             }
             finally { ThumbSemaphore.Release(); }
         }
         catch (Exception ex) when (ex is not OperationCanceledException) { }
+    }
+
+    private static async Task<BitmapSource?> GetVideoThumbnailAsync(string path)
+    {
+        try
+        {
+            var file = await StorageFile.GetFileFromPathAsync(path);
+            using var thumb = await file.GetThumbnailAsync(ThumbnailMode.SingleItem, 150);
+            if (thumb == null) return null;
+
+            var ms = new MemoryStream();
+            using (var stream = thumb.AsStreamForRead())
+                await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            return await Task.Run(() =>
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.StreamSource = ms;
+                bmp.CacheOption  = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                return (BitmapSource)bmp;
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
     }
 
     internal static BitmapSource LoadBitmap(string path, int decodeWidth)

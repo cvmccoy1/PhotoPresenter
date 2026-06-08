@@ -350,9 +350,15 @@
                                             <Style TargetType="Grid">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsVideo}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsVideo}"      Value="True"/>
+                                                            <Condition Binding="{Binding HasThumbnail}" Value="False"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <MultiDataTrigger.Setters>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </MultiDataTrigger.Setters>
+                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Grid.Style>
@@ -361,6 +367,26 @@
                                                    Foreground="{DynamicResource VideoIconForeground}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                            Background="#AA000000" CornerRadius="2" Margin="0,0,4,4" Padding="3,1">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsVideo}"      Value="True"/>
+                                                            <Condition Binding="{Binding HasThumbnail}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <MultiDataTrigger.Setters>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </MultiDataTrigger.Setters>
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="🎞" FontSize="10" LineHeight="12"/>
+                                    </Border>
                                 </Grid>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
