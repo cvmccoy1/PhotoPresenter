@@ -367,26 +367,62 @@
                                                    Foreground="{DynamicResource VideoIconForeground}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                            Background="#AA000000" CornerRadius="2" Margin="0,0,4,4" Padding="3,1">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
+                                    <Grid IsHitTestVisible="False">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <MultiDataTrigger>
-                                                        <MultiDataTrigger.Conditions>
-                                                            <Condition Binding="{Binding IsVideo}"      Value="True"/>
-                                                            <Condition Binding="{Binding HasThumbnail}" Value="True"/>
-                                                        </MultiDataTrigger.Conditions>
-                                                        <MultiDataTrigger.Setters>
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </MultiDataTrigger.Setters>
-                                                    </MultiDataTrigger>
+                                                    <DataTrigger Binding="{Binding IsVideo}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="🎞" FontSize="10" LineHeight="12"/>
-                                    </Border>
+                                        </Grid.Style>
+                                        <Rectangle Height="12" VerticalAlignment="Top">
+                                            <Rectangle.Fill>
+                                                <DrawingBrush TileMode="Tile"
+                                                              Viewport="0,0,14,12" ViewportUnits="Absolute"
+                                                              Viewbox="0,0,14,12"  ViewboxUnits="Absolute">
+                                                    <DrawingBrush.Drawing>
+                                                        <DrawingGroup>
+                                                            <GeometryDrawing Brush="#BB000000">
+                                                                <GeometryDrawing.Geometry>
+                                                                    <RectangleGeometry Rect="0,0,14,12"/>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
+                                                            <GeometryDrawing Brush="#DDFFFFFF">
+                                                                <GeometryDrawing.Geometry>
+                                                                    <RectangleGeometry Rect="3,3,8,6" RadiusX="1" RadiusY="1"/>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
+                                                        </DrawingGroup>
+                                                    </DrawingBrush.Drawing>
+                                                </DrawingBrush>
+                                            </Rectangle.Fill>
+                                        </Rectangle>
+                                        <Rectangle Height="12" VerticalAlignment="Bottom">
+                                            <Rectangle.Fill>
+                                                <DrawingBrush TileMode="Tile"
+                                                              Viewport="0,0,14,12" ViewportUnits="Absolute"
+                                                              Viewbox="0,0,14,12"  ViewboxUnits="Absolute">
+                                                    <DrawingBrush.Drawing>
+                                                        <DrawingGroup>
+                                                            <GeometryDrawing Brush="#BB000000">
+                                                                <GeometryDrawing.Geometry>
+                                                                    <RectangleGeometry Rect="0,0,14,12"/>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
+                                                            <GeometryDrawing Brush="#DDFFFFFF">
+                                                                <GeometryDrawing.Geometry>
+                                                                    <RectangleGeometry Rect="3,3,8,6" RadiusX="1" RadiusY="1"/>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
+                                                        </DrawingGroup>
+                                                    </DrawingBrush.Drawing>
+                                                </DrawingBrush>
+                                            </Rectangle.Fill>
+                                        </Rectangle>
+                                    </Grid>
                                 </Grid>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
