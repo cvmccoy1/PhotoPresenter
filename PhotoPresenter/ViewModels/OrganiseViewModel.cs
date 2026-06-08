@@ -357,9 +357,62 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         });
     }
 
+    // Reconciles in-memory photo list with disk when a folder is selected,
+    // picking up files added or removed externally while another folder was open.
+    private async Task SyncFolderContentsAsync(PhotoFolderViewModel folder)
+    {
+        var folderPath = folder.FullPath;
+        if (!Directory.Exists(folderPath)) return;
+
+        var diskFiles = await Task.Run(() =>
+            Directory.GetFiles(folderPath)
+                .Where(PhotoLibraryService.IsMediaFile)
+                .ToDictionary(f => f, StringComparer.OrdinalIgnoreCase));
+
+        if (SelectedFolder != folder) return; // user navigated away during scan
+
+        bool changed = false;
+
+        foreach (var path in diskFiles.Keys)
+        {
+            if (folder.AllPhotoItems.Any(p => string.Equals(p.FullPath, path, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            var vm = new PhotoItemViewModel(new PhotoItem
+            {
+                FileName     = Path.GetFileName(path),
+                FullPath     = path,
+                CreationDate = File.GetCreationTime(path),
+                IsVideo      = PhotoLibraryService.IsVideoFile(path)
+            });
+            folder.AllPhotoItems.Add(vm);
+            folder.Photos.Add(vm);
+            vm.EnsureThumbnailLoaded();
+            changed = true;
+        }
+
+        var stale = folder.AllPhotoItems
+            .Where(p => !diskFiles.ContainsKey(p.FullPath))
+            .ToList();
+        foreach (var vm in stale)
+        {
+            if (SelectedPhoto == vm) SelectedPhoto = null;
+            folder.AllPhotoItems.Remove(vm);
+            folder.Photos.Remove(vm);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            OnPropertyChanged(nameof(PhotoCountLabel));
+            OnPropertyChanged(nameof(FolderCountLabel));
+        }
+    }
+
     partial void OnSelectedFolderChanged(PhotoFolderViewModel? value)
     {
         SelectedPhoto = null;
+        if (value != null)
+            _ = SyncFolderContentsAsync(value);
         value?.LoadPhotoThumbnails();
         UpdateFolderWatcher(value?.FullPath);
     }
