@@ -14,6 +14,7 @@ public partial class PhotoFolderViewModel : ObservableObject
 
     [ObservableProperty] private ImageSource? _thumbnail;
     [ObservableProperty] private bool _isRemoved;
+    [ObservableProperty] private bool _isPhotoDropTarget;
 
     partial void OnIsRemovedChanged(bool value) => Model.IsRemoved = value;
 

@@ -30,6 +30,8 @@ public partial class OrganiseView : UserControl
     private bool _folderDragCanStart;
     private bool _photoDragCanStart;
 
+    private PhotoFolderViewModel? _photoDropFolder;
+
     // Scroll offsets to restore on first load; -1 means no restore pending.
     private double _pendingPhotoScrollOffset = -1;
     private double _pendingFolderScrollOffset = -1;
@@ -217,8 +219,30 @@ public partial class OrganiseView : UserControl
         }
     }
 
+    private void ClearPhotoDropTarget()
+    {
+        if (_photoDropFolder == null) return;
+        _photoDropFolder.IsPhotoDropTarget = false;
+        _photoDropFolder = null;
+    }
+
     private void FolderList_DragOver(object sender, DragEventArgs e)
     {
+        if (e.Data.GetDataPresent(PhotoDragFormat))
+        {
+            RemoveAdorner();
+            var folder = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
+            if (folder != _photoDropFolder)
+            {
+                ClearPhotoDropTarget();
+                _photoDropFolder = folder;
+                if (folder != null) folder.IsPhotoDropTarget = true;
+            }
+            e.Effects = folder != null ? DragDropEffects.Move : DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
         if (!e.Data.GetDataPresent(FolderDragFormat))
         {
             e.Effects = DragDropEffects.None;
@@ -237,21 +261,36 @@ public partial class OrganiseView : UserControl
         e.Handled = true;
     }
 
-    private void FolderList_DragLeave(object sender, DragEventArgs e) => RemoveAdorner();
+    private void FolderList_DragLeave(object sender, DragEventArgs e)
+    {
+        RemoveAdorner();
+        ClearPhotoDropTarget();
+    }
 
     private void FolderList_Drop(object sender, DragEventArgs e)
     {
         RemoveAdorner();
+
+        if (e.Data.GetDataPresent(PhotoDragFormat))
+        {
+            ClearPhotoDropTarget();
+            var dragging = (List<PhotoItemViewModel>)e.Data.GetData(PhotoDragFormat);
+            var target   = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
+            if (Vm != null && target != null && dragging.Count > 0)
+                Vm.MovePhotosToFolder(dragging, target);
+            return;
+        }
+
         if (!e.Data.GetDataPresent(FolderDragFormat)) return;
-        var dragging = (List<PhotoFolderViewModel>)e.Data.GetData(FolderDragFormat);
-        if (Vm == null || dragging.Count == 0) return;
+        var folderDragging = (List<PhotoFolderViewModel>)e.Data.GetData(FolderDragFormat);
+        if (Vm == null || folderDragging.Count == 0) return;
 
         // Do nothing if the cursor is over one of the items being dragged.
         var itemUnderCursor = HitTestItem<PhotoFolderViewModel>(FolderList, e.GetPosition(FolderList));
-        if (itemUnderCursor != null && dragging.Contains(itemUnderCursor)) return;
+        if (itemUnderCursor != null && folderDragging.Contains(itemUnderCursor)) return;
 
         int slot = GetDropSlot(FolderList, e.GetPosition(FolderList));
-        Vm.ReorderFolders(dragging, slot);
+        Vm.ReorderFolders(folderDragging, slot);
     }
 
     private void FolderRemove_Click(object sender, RoutedEventArgs e)
@@ -364,6 +403,7 @@ public partial class OrganiseView : UserControl
             DragDrop.DoDragDrop(PhotoList, photoDataObj, DragDropEffects.Move);
             PhotoList.QueryContinueDrag -= CancelDragOnEscape;
             RemoveAdorner();
+            ClearPhotoDropTarget();
             _dragStartPoint = Mouse.GetPosition(null);
         }
     }

@@ -117,6 +117,13 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         PhotoFolderViewModel Folder,
         IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> Items);
 
+    private sealed record CrossFolderMoveSnapshot(
+        PhotoFolderViewModel SourceFolder,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> SourceItems,
+        PhotoFolderViewModel DestFolder,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> DestItems,
+        IReadOnlyList<(PhotoItemViewModel Vm, string OriginalPath, string OriginalFileName)> MovedPaths);
+
     private readonly List<object> _undoStack = new();
 
     public bool CanUndo => _undoStack.Count > 0;
@@ -147,6 +154,8 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
             ApplyFolderSnapshot(fs);
         else if (entry is PhotoSnapshot ps)
             ApplyPhotoSnapshot(ps);
+        else if (entry is CrossFolderMoveSnapshot cs)
+            ApplyCrossFolderMoveSnapshot(cs);
 
         OnPropertyChanged(nameof(CanUndo));
     }
@@ -172,12 +181,20 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private void ApplyPhotoSnapshot(PhotoSnapshot snap)
     {
-        var folder = snap.Folder;
+        RestoreFolderItems(snap.Folder, snap.Items);
+        SaveAllPhotoOrder(snap.Folder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
+        if (SelectedPhoto == null || !snap.Folder.Photos.Contains(SelectedPhoto))
+            SelectedPhoto = snap.Folder.Photos.FirstOrDefault();
+    }
 
+    private static void RestoreFolderItems(
+        PhotoFolderViewModel folder,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> items)
+    {
         folder.Photos.Clear();
         folder.AllPhotoItems.Clear();
-
-        foreach (var (vm, wasRemoved, caption, wasMirrored) in snap.Items)
+        foreach (var (vm, wasRemoved, caption, wasMirrored) in items)
         {
             vm.IsRemoved  = wasRemoved;
             vm.Caption    = caption;
@@ -185,12 +202,48 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
             folder.AllPhotoItems.Add(vm);
             if (!wasRemoved) folder.Photos.Add(vm);
         }
+    }
 
-        SaveAllPhotoOrder(folder);
+    private static string GetUniqueDestinationName(string destFolder, string fileName)
+    {
+        if (!File.Exists(Path.Combine(destFolder, fileName))) return fileName;
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var ext  = Path.GetExtension(fileName);
+        for (int i = 1; i <= 999; i++)
+        {
+            var candidate = $"{stem} ({i}){ext}";
+            if (!File.Exists(Path.Combine(destFolder, candidate))) return candidate;
+        }
+        return fileName;
+    }
+
+    private void ApplyCrossFolderMoveSnapshot(CrossFolderMoveSnapshot snap)
+    {
+        foreach (var (vm, origPath, origName) in snap.MovedPaths)
+        {
+            var destName = GetUniqueDestinationName(snap.SourceFolder.FullPath, origName);
+            var destPath = Path.Combine(snap.SourceFolder.FullPath, destName);
+            try
+            {
+                File.Move(vm.FullPath, destPath);
+                vm.UpdatePath(destName, destPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                ShowStatus("Could not fully undo the move — a file may have been modified externally.");
+            }
+        }
+
+        RestoreFolderItems(snap.SourceFolder, snap.SourceItems);
+        RestoreFolderItems(snap.DestFolder,   snap.DestItems);
+
+        SaveAllPhotoOrder(snap.SourceFolder);
+        SaveAllPhotoOrder(snap.DestFolder);
         OnPropertyChanged(nameof(PhotoCountLabel));
+        OnPropertyChanged(nameof(FolderCountLabel));
 
-        if (SelectedPhoto == null || !folder.Photos.Contains(SelectedPhoto))
-            SelectedPhoto = folder.Photos.FirstOrDefault();
+        if (SelectedPhoto == null || !snap.SourceFolder.Photos.Contains(SelectedPhoto))
+            SelectedPhoto = SelectedFolder?.Photos.FirstOrDefault();
     }
 
     // ── Constructor / Load ─────────────────────────────────────────────────────
@@ -604,6 +657,60 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         foreach (var p in photos)
             p.IsMirrored = !p.IsMirrored;
         SaveAllPhotoOrder(SelectedFolder);
+    }
+
+    public void MovePhotosToFolder(List<PhotoItemViewModel> photos, PhotoFolderViewModel targetFolder)
+    {
+        var sourceFolder = SelectedFolder;
+        if (sourceFolder == null || targetFolder == sourceFolder) return;
+
+        var toMove = photos
+            .Where(p => !p.IsRemoved && sourceFolder.AllPhotoItems.Contains(p))
+            .ToList();
+        if (toMove.Count == 0) return;
+
+        var sourceSnap = sourceFolder.AllPhotoItems
+            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray();
+        var destSnap = targetFolder.AllPhotoItems
+            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray();
+
+        var moved = new List<(PhotoItemViewModel Vm, string OrigPath, string OrigName, string NewPath, string NewName)>();
+        foreach (var vm in toMove)
+        {
+            var newName = GetUniqueDestinationName(targetFolder.FullPath, vm.Model.FileName);
+            var newPath = Path.Combine(targetFolder.FullPath, newName);
+            try
+            {
+                File.Move(vm.FullPath, newPath);
+                moved.Add((vm, vm.FullPath, vm.Model.FileName, newPath, newName));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                ShowStatus($"Could not move \"{vm.FileName}\" — it may be in use.");
+            }
+        }
+        if (moved.Count == 0) return;
+
+        _undoStack.Add(new CrossFolderMoveSnapshot(
+            sourceFolder, sourceSnap,
+            targetFolder, destSnap,
+            moved.Select(m => (m.Vm, m.OrigPath, m.OrigName)).ToArray()));
+        if (_undoStack.Count > MaxUndoDepth) _undoStack.RemoveAt(0);
+        OnPropertyChanged(nameof(CanUndo));
+
+        foreach (var (vm, _, _, newPath, newName) in moved)
+        {
+            sourceFolder.Photos.Remove(vm);
+            sourceFolder.AllPhotoItems.Remove(vm);
+            vm.UpdatePath(newName, newPath);
+            targetFolder.AllPhotoItems.Add(vm);
+            targetFolder.Photos.Add(vm);
+        }
+
+        SaveAllPhotoOrder(sourceFolder);
+        SaveAllPhotoOrder(targetFolder);
+        OnPropertyChanged(nameof(PhotoCountLabel));
+        OnPropertyChanged(nameof(FolderCountLabel));
     }
 
     public void SortFoldersByName()
