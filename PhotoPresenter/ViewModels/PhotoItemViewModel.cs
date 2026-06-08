@@ -180,10 +180,10 @@ public partial class PhotoItemViewModel : ObservableObject
         try
         {
             var file = await StorageFile.GetFileFromPathAsync(path);
-            using var thumb = await file.GetThumbnailAsync(ThumbnailMode.SingleItem, 150);
-            if (thumb == null) return null;
+            using var thumb = await file.GetThumbnailAsync(ThumbnailMode.VideosView, 150, ThumbnailOptions.None);
+            if (thumb == null || thumb.Size == 0) return null;
 
-            var ms = new MemoryStream();
+            var ms = new MemoryStream((int)thumb.Size);
             using (var stream = thumb.AsStreamForRead())
                 await stream.CopyToAsync(ms);
             ms.Position = 0;
