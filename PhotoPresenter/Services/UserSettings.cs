@@ -25,23 +25,27 @@ public class UserSettings
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PhotoPresenter", "settings.json");
 
-    public static UserSettings Load()
+    public static UserSettings Load() => Load(SettingsPath);
+
+    internal static UserSettings Load(string path)
     {
         try
         {
-            if (File.Exists(SettingsPath))
-                return JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(SettingsPath)) ?? new();
+            if (File.Exists(path))
+                return JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(path)) ?? new();
         }
         catch { }
         return new();
     }
 
-    public void Save()
+    public void Save() => Save(SettingsPath);
+
+    internal void Save(string path)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(this));
         }
         catch { }
     }

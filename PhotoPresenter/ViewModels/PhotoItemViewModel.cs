@@ -240,7 +240,7 @@ public partial class PhotoItemViewModel : ObservableObject
         catch { return 1; }
     }
 
-    private static int ReadOrientationFromMetadata(BitmapMetadata? metadata)
+    internal static int ReadOrientationFromMetadata(BitmapMetadata? metadata)
     {
         if (metadata == null) return 1;
         try
@@ -257,7 +257,7 @@ public partial class PhotoItemViewModel : ObservableObject
         catch { return 1; }
     }
 
-    private static BitmapSource ApplyExifOrientation(BitmapSource source, int orientation)
+    internal static BitmapSource ApplyExifOrientation(BitmapSource source, int orientation)
     {
         if (orientation <= 1 || orientation > 8) return source;
 

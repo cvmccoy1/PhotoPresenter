@@ -64,7 +64,7 @@ public class PhotoLibraryService : IPhotoLibraryService
     }
 
     // Returns (activeDirs in sidecar order, removedNames). Unknown dirs appended to active.
-    private static (List<DirectoryInfo> Active, List<string> RemovedNames) ApplyFolderOrder(
+    internal static (List<DirectoryInfo> Active, List<string> RemovedNames) ApplyFolderOrder(
         string parentPath, List<DirectoryInfo> subdirs)
     {
         var sidecarPath = Path.Combine(parentPath, FolderOrderFile);
@@ -101,7 +101,7 @@ public class PhotoLibraryService : IPhotoLibraryService
     }
 
     // Returns active photos first (in sidecar order), removed photos at the end.
-    private static List<PhotoItem> LoadPhotosForFolder(string folderPath)
+    internal static List<PhotoItem> LoadPhotosForFolder(string folderPath)
     {
         var files = Directory.GetFiles(folderPath)
             .Where(f => MediaExtensions.Contains(Path.GetExtension(f)))

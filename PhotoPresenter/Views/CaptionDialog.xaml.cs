@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using PhotoPresenter.Services;
 
 namespace PhotoPresenter.Views;
 
@@ -31,6 +32,5 @@ public partial class CaptionDialog : Window
         }
     }
 
-    private static string NormalizeCaption(string text) =>
-        text.Replace("\r\n", "\n").Replace("\r", "\n").Trim();
+    private static string NormalizeCaption(string text) => TextUtils.NormalizeCaption(text);
 }
