@@ -83,6 +83,8 @@ WPF's `BitmapImage` silently ignores the EXIF orientation tag (0x0112), so `Phot
 
 `_folderDragCanStart` / `_photoDragCanStart` bool flags guard against accidental D&D triggered by scrollbar or empty-space clicks. The flags are set `true` only when `PreviewMouseLeftButtonDown` hits a `ListBoxItem`; `PreviewMouseMove` returns immediately if the flag is `false`, suppressing both the insertion-marker adorner and the drop.
 
+`HitsScrollBar(UIElement, Point)` (static helper in `OrganiseView.xaml.cs`) walks the visual tree from `InputHitTest` upward looking for a `ScrollBar`. Both `FolderList_PreviewMouseLeftButtonDown` and `PhotoList_PreviewMouseLeftButtonDown` call it before invoking `UnselectAll()` when the hit misses all `ListBoxItem`s — scrollbar clicks are ignored rather than treated as empty-space clicks, so the folder selection (and the photo pane contents) are preserved while dragging the scrollbar thumb.
+
 ### Open Folder in Explorer
 
 Both pane context menus expose **Open Folder in Explorer** (added at the bottom after a separator). Folders pane: enabled only for a single-folder selection; `FolderTile_ContextMenuOpening` sets `IsEnabled=false` on `FolderOpenExplorer` when 2+ folders are selected. Photos/Videos pane: always enabled. `PhotoOpenExplorer_Click` dispatches to three paths based on the selection count: 0 selected → `explorer.exe "folderPath"`; 1 selected → `explorer.exe /select,"filePath"`; 2+ selected → `SHOpenFolderAndSelectItems` (shell32 P/Invoke, with plain folder-open as fallback). PIDs from `SHParseDisplayName` are freed via `CoTaskMemFree` in a `finally` block.
@@ -127,6 +129,8 @@ All FSW callbacks arrive on a thread-pool thread and dispatch to the UI thread v
 ### Captions
 
 `CaptionDialog` (`Views/CaptionDialog.xaml`) uses `AcceptsReturn="True"` with a `MaxHeight` so the TextBox grows as lines are added then scrolls. Plain Enter submits the dialog; Shift+Enter inserts a newline (the `KeyDown` handler checks `Keyboard.Modifiers` for Shift before treating Enter as OK). `NormalizeCaption` normalises `\r\n` to `\n` and trims surrounding whitespace before the caption is stored. Caption TextBlocks in both the Organise tile (`TextWrapping="Wrap"`, `TextAlignment="Center"`) and the Present mode overlay (`TextWrapping="Wrap"`, `TextAlignment="Center"`) render newlines naturally from the stored `\n` characters.
+
+The `CaptionBox` TextBox has `SpellCheck.IsEnabled="True"` (set in XAML). The code-behind constructor sets `CaptionBox.Language = XmlLanguage.GetLanguage(CultureInfo.CurrentUICulture.IetfLanguageTag)` so the correct Windows dictionary is used (e.g. en-GB, fr-FR). This gives red squiggly underlines and right-click correction suggestions with no additional packages.
 
 ## Global usings
 
