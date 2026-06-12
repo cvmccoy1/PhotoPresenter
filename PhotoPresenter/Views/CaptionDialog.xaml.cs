@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Markup;
 using PhotoPresenter.Services;
 
 namespace PhotoPresenter.Views;
@@ -11,6 +13,7 @@ public partial class CaptionDialog : Window
     public CaptionDialog(string existing = "")
     {
         InitializeComponent();
+        CaptionBox.Language = XmlLanguage.GetLanguage(CultureInfo.CurrentUICulture.IetfLanguageTag);
         CaptionBox.Text = existing;
         Loaded += (_, _) => { CaptionBox.Focus(); CaptionBox.SelectAll(); };
     }

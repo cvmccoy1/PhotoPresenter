@@ -17,6 +17,7 @@
 
         <TextBox x:Name="CaptionBox"
                  Grid.Row="1"
+                 SpellCheck.IsEnabled="True"
                  MaxLength="500"
                  TextWrapping="Wrap"
                  AcceptsReturn="True"
