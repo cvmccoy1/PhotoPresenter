@@ -158,7 +158,7 @@ public partial class OrganiseView : UserControl
         if (HitTestContainer(FolderList, pos) == null)
         {
             _folderDragCanStart = false;
-            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+            if (!HitsScrollBar(FolderList, pos) && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
                 FolderList.UnselectAll();
             _pendingFolderClick = null;
             return;
@@ -345,7 +345,7 @@ public partial class OrganiseView : UserControl
         if (HitTestContainer(PhotoList, pos) == null)
         {
             _photoDragCanStart = false;
-            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
+            if (!HitsScrollBar(PhotoList, pos) && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.None)
                 PhotoList.UnselectAll();
             _pendingPhotoClick = null;
             return;
@@ -743,6 +743,17 @@ public partial class OrganiseView : UserControl
             element = VisualTreeHelper.GetParent(element);
         }
         return null;
+    }
+
+    private static bool HitsScrollBar(UIElement element, Point position)
+    {
+        var hit = element.InputHitTest(position) as DependencyObject;
+        while (hit != null && hit != element)
+        {
+            if (hit is ScrollBar) return true;
+            hit = VisualTreeHelper.GetParent(hit);
+        }
+        return false;
     }
 
     // Returns insertion slot 0..Count: the index before which the dragged item should appear.
