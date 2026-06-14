@@ -70,6 +70,20 @@ public partial class PhotoItemViewModel : ObservableObject
         _ = LoadThumbnailAsync();
     }
 
+    // Used by FSW handlers for newly-arrived files: Windows Shell may not have generated
+    // the video thumbnail yet (or the file may still be encoding). Retries at increasing
+    // intervals until the thumbnail loads or all attempts are exhausted.
+    internal async Task RetryThumbnailAfterDelayAsync()
+    {
+        foreach (int delay in (int[])[2000, 3000, 5000, 10000, 15000])
+        {
+            await Task.Delay(delay);
+            if (Thumbnail != null) return;
+            await LoadThumbnailAsync();
+            if (Thumbnail != null) return;
+        }
+    }
+
     public void EnsureToolTipLoaded()
     {
         if (_toolTipLoaded) return;

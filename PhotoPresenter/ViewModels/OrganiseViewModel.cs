@@ -373,6 +373,8 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
                 IsVideo      = PhotoLibraryService.IsVideoFile(e.FullPath)
             };
             var vm = new PhotoItemViewModel(item);
+            vm.EnsureThumbnailLoaded();
+            _ = vm.RetryThumbnailAfterDelayAsync();
             folder.AllPhotoItems.Add(vm);
             folder.Photos.Add(vm);
             OnPropertyChanged(nameof(PhotoCountLabel));
@@ -400,13 +402,36 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     private void OnFolderFileRenamed(object sender, RenamedEventArgs e)
     {
         var watchedPath = (sender as FileSystemWatcher)?.Path;
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        Application.Current.Dispatcher.InvokeAsync(async () =>
         {
             var folder = SelectedFolder;
             if (folder == null || folder.FullPath != watchedPath) return;
             var vm = folder.AllPhotoItems.FirstOrDefault(p => p.FullPath == e.OldFullPath);
-            if (vm == null) return;
-            vm.UpdatePath(e.Name ?? Path.GetFileName(e.FullPath), e.FullPath);
+            if (vm != null)
+            {
+                vm.UpdatePath(e.Name ?? Path.GetFileName(e.FullPath), e.FullPath);
+                return;
+            }
+            // Rename from a non-media temp file to a media file (e.g. HandBrake output) —
+            // treat as a new addition since no VM exists for the old name.
+            if (!PhotoLibraryService.IsMediaFile(e.FullPath)) return;
+            await Task.Delay(FswDebounceMs);
+            if (!File.Exists(e.FullPath)) return;
+            if (folder.AllPhotoItems.Any(p => p.FullPath == e.FullPath)) return;
+            var item = new PhotoItem
+            {
+                FileName     = e.Name ?? Path.GetFileName(e.FullPath),
+                FullPath     = e.FullPath,
+                CreationDate = File.GetCreationTime(e.FullPath),
+                IsVideo      = PhotoLibraryService.IsVideoFile(e.FullPath)
+            };
+            var newVm = new PhotoItemViewModel(item);
+            newVm.EnsureThumbnailLoaded();
+            _ = newVm.RetryThumbnailAfterDelayAsync();
+            folder.AllPhotoItems.Add(newVm);
+            folder.Photos.Add(newVm);
+            OnPropertyChanged(nameof(PhotoCountLabel));
+            OnPropertyChanged(nameof(FolderCountLabel));
         });
     }
 

@@ -102,7 +102,7 @@ The app uses `FileSystemWatcher` to detect changes made outside the app while it
 | Subfolder renamed | Name updates live in the Folders pane; saved order is updated to match |
 | Subfolder deleted | Folder disappears from the list; a brief notice appears at the top of the screen |
 | New subfolder created | Appears at the bottom of the Folders pane |
-| Photo or video added to the selected folder | Tile appears automatically |
+| Photo or video added to the selected folder | Tile appears automatically; thumbnail updates within seconds even if Windows Shell hasn't caught up yet |
 | Photo or video deleted from the selected folder | Tile disappears |
 | Photo or video renamed in the selected folder | Filename updates in place |
 
