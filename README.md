@@ -109,7 +109,7 @@ The app uses `FileSystemWatcher` to detect changes made outside the app while it
 ### Supported formats
 **Photos:** JPG, JPEG, PNG, BMP, GIF, TIFF, HEIC, HEIF
 
-HEIC/HEIF requires the free [HEIF Image Extensions](https://apps.microsoft.com/detail/9pmmsr1cgpwg) from the Microsoft Store.
+HEIC/HEIF requires the free [HEIF Image Extensions](https://apps.microsoft.com/detail/9pmmsr1cgpwg) from the Microsoft Store. HEIF also depends on an HEVC codec — most PCs already have one, but if HEIC images show no thumbnail or fail to load, also install **HEVC Video Extensions from Device Manufacturer** (free for most devices, search the Microsoft Store) or the [HEVC Video Extensions](https://apps.microsoft.com/detail/9nmzlz57r3t7) (~$0.99 for uncovered devices).
 
 **Videos:** MOV, MP4, AVI, WMV, M4V, MKV
 
