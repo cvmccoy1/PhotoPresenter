@@ -152,12 +152,14 @@ Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` wit
 
 ```
 Unit/
-  FileClassificationTests.cs    — IsMediaFile, IsVideoFile
-  SidecarParsingTests.cs        — ApplyFolderOrder, LoadPhotosForFolder (uses TempDirectory)
-  OrganiseViewModelTests.cs     — Reorder, Remove/Restore, Undo, SetCaption, ToggleMirrors
-                                   (mocked IPhotoLibraryService; LoadAsync(@"Z:\nonexistent") skips FSW)
-  ExifOrientationTests.cs       — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
-  TextUtilsTests.cs             — NormalizeCaption
+  FileClassificationTests.cs       — IsMediaFile, IsVideoFile
+  SidecarParsingTests.cs           — ApplyFolderOrder, LoadPhotosForFolder (uses TempDirectory)
+  OrganiseViewModelTests.cs        — Reorder, Remove/Restore, Undo, SetCaption, ToggleMirrors
+                                      (mocked IPhotoLibraryService; LoadAsync(@"Z:\nonexistent") skips FSW)
+  ExifOrientationTests.cs          — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
+  PhotoItemViewModelTests.cs       — HasThumbnail, EnsureThumbnailLoaded idempotency,
+                                      RetryThumbnailAfterDelayAsync early-exit and pending-check, UpdatePath
+  TextUtilsTests.cs                — NormalizeCaption
 Integration/
   SidecarRoundTripTests.cs      — real temp folders, save→load round-trips
   LibraryLoadTests.cs           — LoadLibraryAsync scenarios
