@@ -13,6 +13,7 @@ public partial class PresentView : UserControl
     private readonly DispatcherTimer _positionTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private double _videoDurationSeconds;
     private bool _isDragging;
+    private bool _mediaFailed;
 
     public PresentView()
     {
@@ -46,6 +47,7 @@ public partial class PresentView : UserControl
                     _positionTimer.Stop();
                     VideoPlayer.Stop();
                     VideoPlayer.Source = null;
+                    HideVideoError();
                 }
                 break;
 
@@ -53,6 +55,7 @@ public partial class PresentView : UserControl
                 var path = Vm?.CurrentVideoPath;
                 if (!string.IsNullOrEmpty(path))
                 {
+                    HideVideoError();
                     _isDragging = false;
                     ScrubSlider.Value = 0;
                     ScrubSlider.Maximum = 100;
@@ -90,6 +93,11 @@ public partial class PresentView : UserControl
         _videoDurationSeconds = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
         ScrubSlider.Maximum = _videoDurationSeconds > 0 ? _videoDurationSeconds : 100;
         ScrubSlider.Value = 0;
+        // Retry Play() — covers timing races and WMF recovery after a partial MediaFailed.
+        if (Vm?.IsPlaying == true)
+            VideoPlayer.Play();
+        if (_mediaFailed || !VideoPlayer.HasAudio)
+            ShowVideoError("Playing without audio — audio codec may not be installed");
     }
 
     private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e)
@@ -99,8 +107,23 @@ public partial class PresentView : UserControl
 
     private void VideoPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
     {
-        _positionTimer.Stop();
-        if (Vm != null) Vm.IsPlaying = false;
+        _mediaFailed = true;
+        ShowVideoError("Unable to play video — codec may not be installed");
+        // Don't reset IsPlaying or stop the timer: WMF may still recover and fire MediaOpened,
+        // at which point the belt-and-suspenders Play() will auto-start the video track.
+    }
+
+    private void ShowVideoError(string message)
+    {
+        VideoErrorText.Text = message;
+        VideoErrorBanner.Visibility = Visibility.Visible;
+    }
+
+    private void HideVideoError()
+    {
+        _mediaFailed = false;
+        VideoErrorBanner.Visibility = Visibility.Collapsed;
+        VideoErrorText.Text = "";
     }
 
     private void ScrubSlider_DragStarted(object sender, DragStartedEventArgs e)

@@ -102,6 +102,25 @@
             </MediaElement.Style>
         </MediaElement>
 
+        <!-- Video error/warning banner (top-centre, shown on MediaFailed or missing audio) -->
+        <Border x:Name="VideoErrorBanner"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Background="#CC000000"
+                CornerRadius="4"
+                Padding="14,7"
+                Margin="0,16,0,0"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <TextBlock x:Name="VideoErrorText"
+                       Foreground="#FFCC44"
+                       FontSize="{DynamicResource FontSize.Small}"
+                       FontFamily="Segoe UI"
+                       TextWrapping="Wrap"
+                       MaxWidth="600"
+                       TextAlignment="Center"/>
+        </Border>
+
         <!-- Loading indicator (hidden when CurrentIsVideo or image loaded) -->
         <TextBlock Text="Loading…"
                    Foreground="#888"
