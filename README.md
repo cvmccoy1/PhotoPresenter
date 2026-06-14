@@ -60,6 +60,7 @@ A Windows WPF application for presenting family photo and video collections on a
   - Position display — current time and total duration (e.g. 0:23 / 3:16)
   - **↻ 90°** — rotate the video 90° clockwise; videos are auto-rotated on load using the orientation metadata written by phone cameras, so portrait videos display upright automatically
   - Volume slider
+- If a video's audio codec is not supported by the Windows media infrastructure, the video still plays automatically and an amber banner appears at the top of the screen explaining that audio is unavailable; navigating to another item clears the banner
 
 ## Requirements
 
