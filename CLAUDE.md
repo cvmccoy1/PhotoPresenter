@@ -140,6 +140,50 @@ All FSW callbacks arrive on a thread-pool thread and dispatch to the UI thread v
 
 The `CaptionBox` TextBox has `SpellCheck.IsEnabled="True"` (set in XAML). The code-behind constructor sets `CaptionBox.Language = XmlLanguage.GetLanguage(CultureInfo.CurrentUICulture.IetfLanguageTag)` so the correct Windows dictionary is used (e.g. en-GB, fr-FR). This gives red squiggly underlines and right-click correction suggestions with no additional packages.
 
+## Tests
+
+```powershell
+dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj
+```
+
+Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` with `UseWPF=true`, `OutputType=Library`. `AssemblyInfo.cs` carries `[InternalsVisibleTo("PhotoPresenter.Tests")]` so all `internal` members are visible to tests.
+
+### Structure
+
+```
+Unit/
+  FileClassificationTests.cs    — IsMediaFile, IsVideoFile
+  SidecarParsingTests.cs        — ApplyFolderOrder, LoadPhotosForFolder (uses TempDirectory)
+  OrganiseViewModelTests.cs     — Reorder, Remove/Restore, Undo, SetCaption, ToggleMirrors
+                                   (mocked IPhotoLibraryService; LoadAsync(@"Z:\nonexistent") skips FSW)
+  ExifOrientationTests.cs       — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
+  TextUtilsTests.cs             — NormalizeCaption
+Integration/
+  SidecarRoundTripTests.cs      — real temp folders, save→load round-trips
+  LibraryLoadTests.cs           — LoadLibraryAsync scenarios
+  UserSettingsTests.cs          — Load/Save with temp path
+Infrastructure/
+  StaFactAttribute.cs           — [StaFact] runs test on STA thread (required for WPF imaging types)
+  StaTheoryAttribute.cs         — [StaTheory] parameterized STA tests
+  StaTestCase.cs                — STA thread runner
+  TempDirectory.cs              — IDisposable temp folder; TinyJpegBytes = minimal valid 1×1 JPEG
+```
+
+### Internal members exposed for testing
+
+| Member | File | Promoted for |
+|--------|------|--------------|
+| `ApplyFolderOrder` / `LoadPhotosForFolder` | `PhotoLibraryService.cs` | Sidecar parsing tests |
+| `ReadOrientationFromMetadata` / `ApplyExifOrientation` | `PhotoItemViewModel.cs` | EXIF orientation tests |
+| `Load(path)` / `Save(path)` overloads | `UserSettings.cs` | Settings round-trip tests |
+| `RetryThumbnailAfterDelayAsync()` | `PhotoItemViewModel.cs` | FSW thumbnail retry; awaitable so tests can exercise the loop without real delays |
+
+### Key conventions
+
+- STA thread (`[StaFact]` / `[StaTheory]`) required for any code that creates `BitmapSource`, `TransformedBitmap`, or `BitmapImage`
+- `OrganiseViewModel` tests pass a non-existent path to `LoadAsync` so the `FileSystemWatcher` silently skips initialisation
+- `TempDirectory` is `IDisposable` — use in a `using` block; `TinyJpegBytes` provides a minimal valid JPEG without needing STA
+
 ## Global usings
 
 `GlobalUsings.cs` adds `System.IO`, `System.Windows.Media`, and `System.Windows.Media.Imaging` globally (required because the WPF SDK creates a temporary project for compilation that does not inherit all implicit usings).
