@@ -15,6 +15,10 @@ public partial class PresentViewModel : ObservableObject
     private int _currentPhotoIndex;
     private int _loadSequence;
 
+    // Precomputed for O(1) overall-position calculation in UpdateLabels.
+    private int[] _cumulativeCounts = [];
+    private int _totalPhotoCount;
+
     // Preload state
     private BitmapSource? _preloadedImage;
     private int _preloadedFolderIndex = -1;
@@ -31,6 +35,7 @@ public partial class PresentViewModel : ObservableObject
     [ObservableProperty] private double _panY;
     [ObservableProperty] private string _folderLabel = "";
     [ObservableProperty] private string _photoLabel = "";
+    [ObservableProperty] private string _overallLabel = "";
 
     // Video state
     [ObservableProperty] private bool _currentIsVideo;
@@ -60,6 +65,17 @@ public partial class PresentViewModel : ObservableObject
     public void SetFolders(List<PhotoFolderViewModel> folders, int startFolderIndex = 0, int startPhotoIndex = 0)
     {
         _allFolders = folders;
+
+        // Precompute cumulative photo counts so UpdateLabels is O(1).
+        _cumulativeCounts = new int[folders.Count];
+        int cumulative = 0;
+        for (int i = 0; i < folders.Count; i++)
+        {
+            _cumulativeCounts[i] = cumulative;
+            cumulative += folders[i].Photos.Count;
+        }
+        _totalPhotoCount = cumulative;
+
         _currentFolderIndex = folders.Count > 0 ? Math.Clamp(startFolderIndex, 0, folders.Count - 1) : 0;
         var photoCount = CurrentPhotos.Count;
         _currentPhotoIndex = photoCount > 0 ? Math.Clamp(startPhotoIndex, 0, photoCount - 1) : 0;
@@ -151,7 +167,9 @@ public partial class PresentViewModel : ObservableObject
     {
         if (_allFolders.Count == 0) return;
         FolderLabel = $"{_allFolders[_currentFolderIndex].Name}  ({_currentFolderIndex + 1} of {_allFolders.Count})";
-        PhotoLabel = $"Item {_currentPhotoIndex + 1} of {CurrentPhotos.Count}";
+        PhotoLabel  = $"Item {_currentPhotoIndex + 1} of {CurrentPhotos.Count}";
+        int overall = _cumulativeCounts[_currentFolderIndex] + _currentPhotoIndex + 1;
+        OverallLabel = $"{overall} of {_totalPhotoCount}";
     }
 
     private async Task LoadCurrentPhotoAsync()

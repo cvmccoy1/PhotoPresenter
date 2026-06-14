@@ -170,6 +170,12 @@
                            FontSize="{DynamicResource FontSize.Medium}"
                            FontFamily="Segoe UI"/>
             </Border>
+            <Border Background="#99000000" CornerRadius="3" Padding="8,4" Margin="0,2">
+                <TextBlock Text="{Binding OverallLabel}"
+                           Foreground="#AAA"
+                           FontSize="{DynamicResource FontSize.Small}"
+                           FontFamily="Segoe UI"/>
+            </Border>
         </StackPanel>
 
         <!-- Key hint (bottom-right, hidden for video) -->
@@ -265,6 +271,9 @@
                                            FontSize="{DynamicResource FontSize.Normal}"
                                            FontFamily="Segoe UI"/>
                                 <TextBlock Text="{Binding PhotoLabel}" Foreground="#CCC"
+                                           FontSize="{DynamicResource FontSize.Small}"
+                                           FontFamily="Segoe UI"/>
+                                <TextBlock Text="{Binding OverallLabel}" Foreground="#AAA"
                                            FontSize="{DynamicResource FontSize.Small}"
                                            FontFamily="Segoe UI"/>
                             </StackPanel>
