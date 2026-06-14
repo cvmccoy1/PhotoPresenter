@@ -67,6 +67,19 @@ public partial class OrganiseView : UserControl
                 SchedulePhotoScrollRestore();
                 ScheduleFolderScrollRestore();
             }
+
+            // When returning from Present mode, scroll both panes to show the
+            // last-viewed item.  Dispatched at Background priority so it fires after
+            // the saved-offset restores above, overriding them.
+            if (vm.ScrollPhotoIntoViewRequested)
+            {
+                vm.ScrollPhotoIntoViewRequested = false;
+                Dispatcher.InvokeAsync(() =>
+                {
+                    FolderList.ScrollIntoView(FolderList.SelectedItem);
+                    PhotoList.ScrollIntoView(PhotoList.SelectedItem);
+                }, DispatcherPriority.Background);
+            }
         }
     }
 

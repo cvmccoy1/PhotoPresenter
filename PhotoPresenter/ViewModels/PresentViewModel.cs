@@ -131,6 +131,12 @@ public partial class PresentViewModel : ObservableObject
             ? $"{(int)ts.TotalHours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
             : $"{ts.Minutes}:{ts.Seconds:D2}";
 
+    public PhotoFolderViewModel? CurrentFolder =>
+        _allFolders.Count > 0 ? _allFolders[_currentFolderIndex] : null;
+
+    public PhotoItemViewModel? CurrentPhotoItem =>
+        CurrentPhotos.Count > 0 ? CurrentPhotos[_currentPhotoIndex] : null;
+
     private ObservableCollection<PhotoItemViewModel> CurrentPhotos =>
         _allFolders.Count > 0 ? _allFolders[_currentFolderIndex].Photos : new();
 

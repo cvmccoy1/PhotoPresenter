@@ -38,6 +38,11 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private PhotoItemViewModel? _selectedPhoto;
 
+    // Set to true by MainViewModel when returning from Present mode so OrganiseView
+    // can scroll the selected folder and photo tile into view.
+    [ObservableProperty]
+    private bool _scrollPhotoIntoViewRequested;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentFolderItems))]
     [NotifyPropertyChangedFor(nameof(FolderCountLabel))]

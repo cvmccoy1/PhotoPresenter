@@ -72,5 +72,18 @@ public partial class MainViewModel : ObservableObject
         CurrentMode = AppMode.Present;
     }
 
-    public void SwitchToOrganise() => CurrentMode = AppMode.Organise;
+    public void SwitchToOrganise()
+    {
+        var lastFolder = PresentVM.CurrentFolder;
+        var lastPhoto  = PresentVM.CurrentPhotoItem;
+
+        if (lastFolder != null && lastPhoto != null)
+        {
+            OrganiseVM.SelectedFolder = lastFolder;
+            OrganiseVM.SelectedPhoto  = lastPhoto;
+            OrganiseVM.ScrollPhotoIntoViewRequested = true;
+        }
+
+        CurrentMode = AppMode.Organise;
+    }
 }
