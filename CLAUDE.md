@@ -36,6 +36,8 @@ WPF MVVM app with two modes — **Organise** and **Present** — wired via a Dat
 
 `MainViewModel.CurrentMode` (enum `AppMode`) controls `CurrentView` (computed property). `MainWindow.cs` subscribes to `PropertyChanged` on `MainViewModel` and handles the `WindowStyle`/`WindowState` transition for fullscreen Present mode.
 
+`SwitchToPresent()` captures `OrganiseVM.SelectedFolder` / `SelectedPhoto` and passes them as start indices to `PresentVM.SetFolders`. `SwitchToOrganise()` reads `PresentVM.CurrentFolder` / `CurrentPhotoItem` (read-only properties derived from the current index fields) and writes them back to `OrganiseVM.SelectedFolder` / `SelectedPhoto`, then sets `OrganiseVM.ScrollPhotoIntoViewRequested = true` before switching mode. `OrganiseView.OnLoaded` checks the flag (the view is recreated each mode switch), resets it, and dispatches `FolderList.ScrollIntoView` + `PhotoList.ScrollIntoView` at `DispatcherPriority.Background` — this runs after any saved-offset restore and overrides it, leaving both panes scrolled to show the last-viewed item.
+
 ### Session persistence
 
 `UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name), `LastSelectedPhoto` (filename), `PhotoScrollOffset`, `FolderScrollOffset`, `ShowAllFolders`, `ShowAllPhotos`, `Volume` (Present mode, default 0.5), window bounds, `WindowMaximized`, `SplitterPosition`, `Theme` (default `"Light"`), and `TextSize` (default `"Normal"`). All names are matched case-insensitively on restore. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point for most settings — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds window bounds, `LastSelectedFolder`, `LastSelectedPhoto`, `Theme`, and `TextSize` before writing. On startup, `MainViewModel` passes both saved names to `OrganiseViewModel.LoadAsync`, which restores the folder first (falling back to the first folder if not found), then restores the photo within that folder's active `Photos` collection (falling back to no selection if not found). `OnSelectedFolderChanged` resets `SelectedPhoto` to null synchronously, so the photo assignment in `LoadAsync` runs after that reset. `ShowAllFolders` and `ShowAllPhotos` are set on `OrganiseVM` immediately after firing `LoadAsync` (which suspends at its first `await`), so the flags are in place before the collections are populated on resume.
@@ -55,7 +57,7 @@ Missing entries (renamed/deleted files) are silently skipped; unmentioned items 
 
 ### Key bindings
 
-Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise. Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise (syncs last-viewed folder/photo back to Organise mode). Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
 
 ### Zoom / Pan
 
