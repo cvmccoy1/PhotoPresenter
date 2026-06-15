@@ -13,7 +13,6 @@ public partial class PresentView : UserControl
     private readonly DispatcherTimer _positionTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private double _videoDurationSeconds;
     private bool _isDragging;
-    private bool _isTrackClick;
     private bool _mediaFailed;
 
     public PresentView()
@@ -27,7 +26,6 @@ public partial class PresentView : UserControl
         ScrubSlider.AddHandler(Thumb.DragCompletedEvent,
             new DragCompletedEventHandler(ScrubSlider_DragCompleted));
         ScrubSlider.PreviewMouseLeftButtonDown += ScrubSlider_PreviewMouseLeftButtonDown;
-        ScrubSlider.PreviewMouseLeftButtonUp   += ScrubSlider_PreviewMouseLeftButtonUp;
         ScrubSlider.ValueChanged               += ScrubSlider_ValueChanged;
     }
 
@@ -151,40 +149,41 @@ public partial class PresentView : UserControl
             VideoPlayer.Play();
     }
 
-    // Block the timer and detect whether this is a thumb drag or a track click.
-    // For track clicks: jump to the exact clicked position and suppress the
-    // RepeatButton's LargeChange command (which caused the jump-to-start/end behaviour).
+    // Track click: jump to exact position and handle seek entirely here, bypassing the
+    // RepeatButton's LargeChange command. No PreviewMouseLeftButtonUp needed — the timer
+    // resumes tracking the video position after this handler returns.
+    // Thumb click: set _isDragging only; DragStarted/DragCompleted own the rest.
     private void ScrubSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _isDragging = true;
         if (IsThumbHit(e.OriginalSource as DependencyObject))
         {
-            _isTrackClick = false; // DragStarted/DragCompleted will handle this drag.
+            _isDragging = true;
+            return;
         }
-        else
+
+        if (ScrubSlider.Template.FindName("PART_Track", ScrubSlider) is Track track)
         {
-            _isTrackClick = true;
-            if (ScrubSlider.Template.FindName("PART_Track", ScrubSlider) is Track track)
-                ScrubSlider.Value = track.ValueFromPoint(e.GetPosition(track));
-            e.Handled = true; // Suppress RepeatButton so it can't fire LargeChange.
+            ScrubSlider.Value = track.ValueFromPoint(e.GetPosition(track));
+            var pos = TimeSpan.FromSeconds(ScrubSlider.Value);
+            VideoPlayer.Position = pos;
+            if (Vm?.IsPlaying == false && VideoPlayer.Source != null)
+            {
+                // Force WMF to render the seeked frame while paused.
+                VideoPlayer.Play();
+                VideoPlayer.Pause();
+            }
+            else if (Vm?.IsPlaying == true)
+            {
+                VideoPlayer.Play(); // Resume from seeked position.
+            }
+            if (VideoPlayer.NaturalDuration.HasTimeSpan)
+                Vm?.UpdatePosition(pos, VideoPlayer.NaturalDuration.TimeSpan);
         }
+        e.Handled = true; // Suppress RepeatButton LargeChange.
     }
 
-    // Track click completion. _isTrackClick is false for thumb drags (set in PreviewMouseLeftButtonDown),
-    // so this is a no-op for those — DragCompleted fires afterward and handles them.
-    private void ScrubSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (!_isTrackClick) return;
-        _isTrackClick = false;
-        _isDragging = false;
-        VideoPlayer.Position = TimeSpan.FromSeconds(ScrubSlider.Value);
-        if (Vm?.IsPlaying == true)
-            VideoPlayer.Play();
-    }
-
-    // Live scrub: seek on each value change while dragging.
-    // Also forces WMF to render the seeked frame when the video is paused (WMF does not
-    // update the displayed frame on a Position change alone without a Play/Pause cycle).
+    // Live scrub during thumb drag: seek on each value change and force WMF to render
+    // the current frame when paused (Position change alone does not update the display).
     private void ScrubSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!_isDragging) return;
