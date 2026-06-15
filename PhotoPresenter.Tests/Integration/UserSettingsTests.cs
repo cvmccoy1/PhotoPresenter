@@ -121,4 +121,14 @@ public class UserSettingsTests : IDisposable
         Assert.Equal(original.Theme,               loaded.Theme);
         Assert.Equal(original.TextSize,            loaded.TextSize);
     }
+
+    [Fact]
+    public void Save_PublicOverload_DoesNotThrow()
+    {
+        // The public Save() overload (line 41) delegates to Save(SettingsPath).
+        // Load first so any existing window bounds / LastParentFolder are preserved —
+        // saving blank defaults would regress coverage of MainWindow.RestoreWindowBounds.
+        var settings = UserSettings.Load();
+        Assert.Null(Record.Exception(() => settings.Save()));
+    }
 }

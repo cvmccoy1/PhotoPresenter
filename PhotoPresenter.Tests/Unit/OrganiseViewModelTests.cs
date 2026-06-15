@@ -821,4 +821,29 @@ public class OrganiseViewModelTests
         Assert.NotNull(vm.SelectedFolder);
         Assert.Equal("B", vm.SelectedFolder!.Name);
     }
+
+    // ── HasStatusMessage (line 22) ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task HasStatusMessage_FalseByDefault_TrueAfterMessageSet()
+    {
+        var vm = await BuildVm();
+        Assert.False(vm.HasStatusMessage);
+
+        vm.StatusMessage = "Something went wrong";
+
+        Assert.True(vm.HasStatusMessage);
+    }
+
+    [Fact]
+    public async Task HasStatusMessage_FalseAfterMessageCleared()
+    {
+        var vm = await BuildVm();
+        vm.StatusMessage = "error";
+        Assert.True(vm.HasStatusMessage);
+
+        vm.StatusMessage = null;
+
+        Assert.False(vm.HasStatusMessage);
+    }
 }

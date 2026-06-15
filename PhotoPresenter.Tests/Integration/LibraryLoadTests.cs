@@ -132,4 +132,37 @@ public class LibraryLoadTests : IDisposable
 
         Assert.Equal(sentinel, result);
     }
+
+    // ── ApplyFolderOrder / LoadPhotosForFolder — null sidecar.Order ───────────────
+
+    [Fact]
+    public void ApplyFolderOrder_WhenSidecarOrderIsNull_ReturnsFoldersAlphabetically()
+    {
+        // sidecar.Order == null → early return at line 78; should fall back to alphabetical
+        File.WriteAllText(Path.Combine(_tmp.Path, "_photofolderorder.json"), """{"order":null}""");
+        Directory.CreateDirectory(Path.Combine(_tmp.Path, "Bravo"));
+        Directory.CreateDirectory(Path.Combine(_tmp.Path, "Alpha"));
+        var subdirs = new DirectoryInfo(_tmp.Path).GetDirectories().ToList();
+
+        var (active, removed) = PhotoLibraryService.ApplyFolderOrder(_tmp.Path, subdirs);
+
+        Assert.Equal(2, active.Count);
+        Assert.Equal("Alpha", active[0].Name);
+        Assert.Equal("Bravo", active[1].Name);
+        Assert.Empty(removed);
+    }
+
+    [Fact]
+    public void LoadPhotosForFolder_WhenSidecarOrderIsNull_ReturnsPhotosByDate()
+    {
+        // sidecar.Order == null → early return at lines 122-124; falls back to date order
+        File.WriteAllText(Path.Combine(_tmp.Path, "_photoorder.json"), """{"order":null}""");
+        File.WriteAllBytes(Path.Combine(_tmp.Path, "img.jpg"), TempDirectory.TinyJpegBytes);
+
+        var result = PhotoLibraryService.LoadPhotosForFolder(_tmp.Path);
+
+        Assert.Single(result);
+        Assert.Equal("img.jpg", result[0].FileName);
+    }
+
 }
