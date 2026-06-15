@@ -152,4 +152,29 @@ public class MainWindowTests
             Assert.Equal(WindowStyle.SingleBorderWindow, window.WindowStyle);
         });
     }
+
+    // ── SwitchToOrganise syncs last-viewed folder/photo back ──────────────────────
+
+    [Fact]
+    public void SwitchToOrganise_WhenPresentVmHasFolderAndPhoto_SyncsSelectionBackToOrganise()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+
+            // Set up PresentVM with real folders/photos so CurrentFolder/CurrentPhotoItem
+            // are non-null; SwitchToOrganise's non-null branch then writes them back.
+            var folder = new PhotoPresenter.Models.PhotoFolder { Name = "F", FullPath = @"Z:\F" };
+            folder.Photos.Add(new PhotoPresenter.Models.PhotoItem { FileName = "a.jpg", FullPath = @"Z:\F\a.jpg" });
+            var folderVm = new PhotoPresenter.ViewModels.PhotoFolderViewModel(folder);
+            vm.PresentVM.SetFolders(new List<PhotoPresenter.ViewModels.PhotoFolderViewModel> { folderVm });
+            vm.CurrentMode = AppMode.Present;
+
+            vm.SwitchToOrganise();
+
+            Assert.Same(folderVm, vm.OrganiseVM.SelectedFolder);
+            Assert.Same(folderVm.Photos[0], vm.OrganiseVM.SelectedPhoto);
+        });
+    }
 }

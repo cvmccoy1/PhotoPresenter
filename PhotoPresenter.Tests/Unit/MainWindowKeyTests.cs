@@ -278,4 +278,40 @@ public class MainWindowKeyTests
             Assert.False(window.HandleKeyDown(Key.A, ModifierKeys.None));
         });
     }
+
+    // ── F5 with folders loaded ────────────────────────────────────────────────────
+
+    [Fact]
+    public void HandleKeyDown_F5_WithFoldersLoaded_SwitchesToPresentMode()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+
+            // Add a folder directly — bypasses LoadAsync and avoids FSW/file I/O.
+            var folderVm = MakeFolders(2)[0];
+            vm.OrganiseVM.Folders.Add(folderVm);
+
+            window.HandleKeyDown(Key.F5, ModifierKeys.None);
+
+            Assert.Equal(AppMode.Present, vm.CurrentMode);
+        });
+    }
+
+    [Fact]
+    public void HandleKeyDown_F5_WithFoldersLoaded_PresentVmHasTheFolders()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            var folderVm = MakeFolders(3)[0];
+            vm.OrganiseVM.Folders.Add(folderVm);
+
+            window.HandleKeyDown(Key.F5, ModifierKeys.None);
+
+            Assert.Same(folderVm, vm.PresentVM.CurrentFolder);
+        });
+    }
 }

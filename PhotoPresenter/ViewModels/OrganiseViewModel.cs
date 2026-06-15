@@ -442,7 +442,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     // Reconciles in-memory photo list with disk when a folder is selected,
     // picking up files added or removed externally while another folder was open.
-    private async Task SyncFolderContentsAsync(PhotoFolderViewModel folder)
+    internal async Task SyncFolderContentsAsync(PhotoFolderViewModel folder)
     {
         var folderPath = folder.FullPath;
         if (!Directory.Exists(folderPath)) return;
