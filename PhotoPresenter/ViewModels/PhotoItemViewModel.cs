@@ -154,7 +154,7 @@ public partial class PhotoItemViewModel : ObservableObject
             ? $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}\nMirrored: Yes"
             : $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
 
-    private static string FormatSize(long bytes)
+    internal static string FormatSize(long bytes)
     {
         if (bytes <= 0) return "Unknown";
         if (bytes >= 1_073_741_824L)

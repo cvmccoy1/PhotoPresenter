@@ -135,4 +135,179 @@ public class PhotoItemViewModelTests
         Assert.Equal("Keep this", vm.Caption);
         Assert.True(vm.IsMirrored);
     }
+
+    // ── HasCaption ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void HasCaption_FalseWhenCaptionIsEmpty()
+    {
+        var vm = MakeVm();
+        vm.Caption = "";
+        Assert.False(vm.HasCaption);
+    }
+
+    [Fact]
+    public void HasCaption_TrueWhenCaptionHasText()
+    {
+        var vm = MakeVm();
+        vm.Caption = "Hello";
+        Assert.True(vm.HasCaption);
+    }
+
+    [Fact]
+    public void Caption_SyncedToModel()
+    {
+        var vm = MakeVm();
+        vm.Caption = "Test";
+        Assert.Equal("Test", vm.Model.Caption);
+    }
+
+    [Fact]
+    public void IsMirrored_SyncedToModel()
+    {
+        var vm = MakeVm();
+        vm.IsMirrored = true;
+        Assert.True(vm.Model.IsMirrored);
+    }
+
+    // ── EnsureToolTipLoaded ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void EnsureToolTipLoaded_SetsToolTipTextSynchronously()
+    {
+        var item = new PhotoItem
+        {
+            FileName = "photo.jpg",
+            FullPath = @"Z:\nonexistent\photo.jpg",
+            CreationDate = new DateTime(2024, 6, 15, 10, 30, 0)
+        };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.False(string.IsNullOrEmpty(vm.ToolTipText));
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_IncludesFileExtension()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains(".JPG", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_IncludesDateWhenSet()
+    {
+        var item = new PhotoItem
+        {
+            FileName = "photo.jpg",
+            FullPath = @"Z:\nonexistent\photo.jpg",
+            CreationDate = new DateTime(2024, 3, 7)
+        };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("2024-03-07", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_UnknownDateWhenCreationDateDefault()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Unknown", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_WhenMirrored_ContainsMirroredLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg", IsMirrored = true };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Mirrored: Yes", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_WhenNotMirrored_DoesNotContainMirroredLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg", IsMirrored = false };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.DoesNotContain("Mirrored", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_IsIdempotent_SecondCallDoesNotReloadText()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+        vm.EnsureToolTipLoaded();
+        var first = vm.ToolTipText;
+
+        vm.EnsureToolTipLoaded(); // should be a no-op
+
+        Assert.Equal(first, vm.ToolTipText);
+    }
+
+    [Fact]
+    public void IsMirroredChanged_ResetsToolTipSoNextLoadReflectsMirrorState()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+        vm.EnsureToolTipLoaded();
+        Assert.DoesNotContain("Mirrored", vm.ToolTipText);
+
+        // Changing IsMirrored resets _toolTipLoaded, so the next call reloads.
+        vm.IsMirrored = true;
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Mirrored: Yes", vm.ToolTipText);
+    }
+
+    // ── FormatSize ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void FormatSize_Zero_ReturnsUnknown()
+        => Assert.Equal("Unknown", PhotoItemViewModel.FormatSize(0));
+
+    [Fact]
+    public void FormatSize_Negative_ReturnsUnknown()
+        => Assert.Equal("Unknown", PhotoItemViewModel.FormatSize(-1));
+
+    [Fact]
+    public void FormatSize_Megabytes_FormatsMB()
+    {
+        // 5 MB = 5 * 1_048_576 bytes
+        var result = PhotoItemViewModel.FormatSize(5 * 1_048_576L);
+        Assert.Contains("MB", result);
+        Assert.Contains("5", result);
+    }
+
+    [Fact]
+    public void FormatSize_Gigabytes_FormatsGB()
+    {
+        // 2 GB = 2 * 1_073_741_824 bytes
+        var result = PhotoItemViewModel.FormatSize(2 * 1_073_741_824L);
+        Assert.Contains("GB", result);
+        Assert.Contains("2", result);
+    }
+
+    [Fact]
+    public void FormatSize_ExactlyOneGigabyte_FormatsGB()
+    {
+        var result = PhotoItemViewModel.FormatSize(1_073_741_824L);
+        Assert.Contains("GB", result);
+    }
 }

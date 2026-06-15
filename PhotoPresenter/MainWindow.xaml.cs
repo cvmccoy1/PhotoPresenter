@@ -154,68 +154,68 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Z
-            && (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0
+        if (HandleKeyDown(e.Key, e.KeyboardDevice.Modifiers))
+            e.Handled = true;
+    }
+
+    // Extracted for testability — returns true when the key was consumed.
+    internal bool HandleKeyDown(Key key, ModifierKeys modifiers)
+    {
+        if (key == Key.Z
+            && (modifiers & ModifierKeys.Control) != 0
             && _vm.CurrentMode == AppMode.Organise)
         {
             _vm.OrganiseVM.Undo();
-            e.Handled = true;
-            return;
+            return true;
         }
 
-        if (e.Key == Key.F5 && _vm.CurrentMode == AppMode.Organise)
+        if (key == Key.F5 && _vm.CurrentMode == AppMode.Organise)
         {
             _vm.SwitchToPresentCommand.Execute(null);
-            e.Handled = true;
-            return;
+            return true;
         }
 
-        if (e.Key == Key.Space && _vm.CurrentMode == AppMode.Organise)
+        if (key == Key.Space && _vm.CurrentMode == AppMode.Organise)
         {
             // Only intercept Space when the focused element doesn't already use it
             // (buttons click, checkboxes toggle, dropdowns open — let those through).
             if (Keyboard.FocusedElement is not (ButtonBase or ComboBox or TextBoxBase))
             {
                 _vm.SwitchToPresentCommand.Execute(null);
-                e.Handled = true;
+                return true;
             }
-            return;
+            return false;
         }
 
-        if (_vm.CurrentMode != AppMode.Present) return;
+        if (_vm.CurrentMode != AppMode.Present) return false;
 
         var pvm = _vm.PresentVM;
-        switch (e.Key)
+        switch (key)
         {
             case Key.Right:
                 pvm.NextPhoto();
-                e.Handled = true;
-                break;
+                return true;
             case Key.Space:
                 if (pvm.CurrentIsVideo)
                     pvm.IsPlaying = !pvm.IsPlaying;
                 else
                     pvm.NextPhoto();
-                e.Handled = true;
-                break;
+                return true;
             case Key.Left:
                 pvm.PreviousPhoto();
-                e.Handled = true;
-                break;
+                return true;
             case Key.Add:
             case Key.OemPlus:
                 pvm.ZoomIn();
-                e.Handled = true;
-                break;
+                return true;
             case Key.Subtract:
             case Key.OemMinus:
                 pvm.ZoomOut();
-                e.Handled = true;
-                break;
+                return true;
             case Key.Escape:
                 _vm.SwitchToOrganise();
-                e.Handled = true;
-                break;
+                return true;
         }
+        return false;
     }
 }
