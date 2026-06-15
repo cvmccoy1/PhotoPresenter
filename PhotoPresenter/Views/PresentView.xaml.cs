@@ -25,6 +25,9 @@ public partial class PresentView : UserControl
             new DragStartedEventHandler(ScrubSlider_DragStarted));
         ScrubSlider.AddHandler(Thumb.DragCompletedEvent,
             new DragCompletedEventHandler(ScrubSlider_DragCompleted));
+        ScrubSlider.PreviewMouseLeftButtonDown += ScrubSlider_PreviewMouseLeftButtonDown;
+        ScrubSlider.MouseLeftButtonUp          += ScrubSlider_MouseLeftButtonUp;
+        ScrubSlider.ValueChanged               += ScrubSlider_ValueChanged;
     }
 
     private PresentViewModel? Vm => DataContext as PresentViewModel;
@@ -70,8 +73,15 @@ public partial class PresentView : UserControl
                 // Only act if a video is actually loaded
                 if (Vm?.CurrentIsVideo == true && VideoPlayer.Source != null)
                 {
-                    if (Vm.IsPlaying) VideoPlayer.Play();
-                    else VideoPlayer.Pause();
+                    if (Vm.IsPlaying)
+                    {
+                        VideoPlayer.Play();
+                        _positionTimer.Start();
+                    }
+                    else
+                    {
+                        VideoPlayer.Pause();
+                    }
                 }
                 break;
         }
@@ -103,6 +113,7 @@ public partial class PresentView : UserControl
     private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e)
     {
         if (Vm != null) Vm.IsPlaying = false;
+        _positionTimer.Stop();
     }
 
     private void VideoPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
@@ -126,13 +137,35 @@ public partial class PresentView : UserControl
         VideoErrorText.Text = "";
     }
 
+    // Thumb drag: set flag so timer stops overriding the slider.
     private void ScrubSlider_DragStarted(object sender, DragStartedEventArgs e)
-    {
-        _isDragging = true;
-    }
+        => _isDragging = true;
 
+    // Thumb drag complete: seek and resume play.
     private void ScrubSlider_DragCompleted(object sender, DragCompletedEventArgs e)
     {
+        _isDragging = false;
+        VideoPlayer.Position = TimeSpan.FromSeconds(ScrubSlider.Value);
+        if (Vm?.IsPlaying == true)
+            VideoPlayer.Play();
+    }
+
+    // Track click: also block the timer so it can't snap the slider back mid-click.
+    private void ScrubSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        => _isDragging = true;
+
+    // Live scrub: seek on each value change while _isDragging (thumb drag path).
+    private void ScrubSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_isDragging) return;
+        VideoPlayer.Position = TimeSpan.FromSeconds(e.NewValue);
+    }
+
+    // Track click completion: DragCompleted fires before MouseLeftButtonUp for thumb drags
+    // and clears _isDragging, so _isDragging == true here only for track clicks.
+    private void ScrubSlider_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDragging) return;
         _isDragging = false;
         VideoPlayer.Position = TimeSpan.FromSeconds(ScrubSlider.Value);
         if (Vm?.IsPlaying == true)
