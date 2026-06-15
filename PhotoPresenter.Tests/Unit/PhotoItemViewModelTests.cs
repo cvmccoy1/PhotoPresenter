@@ -310,4 +310,73 @@ public class PhotoItemViewModelTests
         var result = PhotoItemViewModel.FormatSize(1_073_741_824L);
         Assert.Contains("GB", result);
     }
+
+    // ── LoadToolTipDetailAsync ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task LoadToolTipDetailAsync_ForPhotoItem_SetsDimensionsInToolTip()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm   = new PhotoItemViewModel(item);
+        var fi   = new FileInfo(item.FullPath); // doesn't exist → fi.Exists = false
+
+        await vm.LoadToolTipDetailAsync(fi);
+
+        // GetPhotoDimensions catches the IOException for non-existent file → "Unknown"
+        Assert.Contains("Dimensions:", vm.ToolTipText);
+    }
+
+    [Fact]
+    public async Task LoadToolTipDetailAsync_ForVideoItem_SetsLengthInToolTip()
+    {
+        var item = new PhotoItem { FileName = "clip.mp4", FullPath = @"Z:\nonexistent\clip.mp4", IsVideo = true };
+        var vm   = new PhotoItemViewModel(item);
+        var fi   = new FileInfo(item.FullPath);
+
+        await vm.LoadToolTipDetailAsync(fi);
+
+        // GetVideoDuration returns "Unknown" for a non-existent file
+        Assert.Contains("Length:", vm.ToolTipText);
+    }
+
+    [Fact]
+    public async Task LoadToolTipDetailAsync_FileExists_IncludesSizeInToolTip()
+    {
+        using var tmp = new PhotoPresenter.Tests.Infrastructure.TempDirectory();
+        var path = tmp.CreateFile("photo.jpg", PhotoPresenter.Tests.Infrastructure.TempDirectory.TinyJpegBytes);
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = path };
+        var vm   = new PhotoItemViewModel(item);
+        var fi   = new FileInfo(path);
+
+        await vm.LoadToolTipDetailAsync(fi);
+
+        // fi.Exists = true; FormatSize(fi.Length) → "x.x MB" (not "Unknown")
+        Assert.Contains("Size:", vm.ToolTipText);
+        Assert.DoesNotContain("Size: Unknown", vm.ToolTipText);
+    }
+
+    // ── ReadOrientationFromMetadata — ushort and string branches ─────────────────
+
+    [StaFact]
+    public void ReadOrientationFromMetadata_UshortOrientation_ReturnsIntValue()
+    {
+        var meta = new BitmapMetadata("jpg");
+        meta.SetQuery("/app1/ifd/{ushort=274}", (ushort)6);
+
+        int result = PhotoItemViewModel.ReadOrientationFromMetadata(meta);
+
+        Assert.Equal(6, result);
+    }
+
+    [StaFact]
+    public void ReadOrientationFromMetadata_StringOrientation_ParsesAndReturnsValue()
+    {
+        var meta = new BitmapMetadata("jpg");
+        // XMP stores orientation as a string; the second GetQuery path handles this.
+        meta.SetQuery("/xmp/exif:Orientation", "8");
+
+        int result = PhotoItemViewModel.ReadOrientationFromMetadata(meta);
+
+        Assert.Equal(8, result);
+    }
 }

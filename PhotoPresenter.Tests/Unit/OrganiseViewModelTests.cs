@@ -759,4 +759,43 @@ public class OrganiseViewModelTests
             });
         return folder;
     }
+
+    // ── Dispose ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Dispose_DoesNotThrow()
+    {
+        var library = Substitute.For<IPhotoLibraryService>();
+        library.LoadLibraryAsync(Arg.Any<string>()).Returns(Task.FromResult(new List<PhotoFolder>()));
+        var vm = new OrganiseViewModel(library);
+        Assert.Null(Record.Exception(() => vm.Dispose()));
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        var library = Substitute.For<IPhotoLibraryService>();
+        library.LoadLibraryAsync(Arg.Any<string>()).Returns(Task.FromResult(new List<PhotoFolder>()));
+        var vm = new OrganiseViewModel(library);
+        vm.Dispose();
+        Assert.Null(Record.Exception(() => vm.Dispose()));
+    }
+
+    // ── Photos wrapper property ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Photos_WhenFolderSelected_ReturnsFolderPhotos()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg", "b.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        Assert.Same(vm.SelectedFolder.Photos, vm.Photos);
+    }
+
+    [Fact]
+    public async Task Photos_WhenNoFolderSelected_ReturnsNull()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        vm.SelectedFolder = null;
+        Assert.Null(vm.Photos);
+    }
 }

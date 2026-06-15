@@ -311,7 +311,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private void OnSubfolderRenamed(object sender, RenamedEventArgs e)
     {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        Application.Current?.Dispatcher.InvokeAsync(() =>
         {
             var vm = _allFolderItems.FirstOrDefault(f => f.FullPath == e.OldFullPath);
             if (vm == null) return;
@@ -324,7 +324,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private void OnSubfolderDeleted(object sender, FileSystemEventArgs e)
     {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        Application.Current?.Dispatcher.InvokeAsync(() =>
         {
             var vm = _allFolderItems.FirstOrDefault(f => f.FullPath == e.FullPath);
             if (vm == null) return;
@@ -344,7 +344,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private void OnSubfolderCreated(object sender, FileSystemEventArgs e)
     {
-        Application.Current.Dispatcher.InvokeAsync(async () =>
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
         {
             await Task.Delay(FswDebounceMs);
             if (!Directory.Exists(e.FullPath)) return;
@@ -363,7 +363,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     {
         if (!PhotoLibraryService.IsMediaFile(e.FullPath)) return;
         var watchedPath = (sender as FileSystemWatcher)?.Path;
-        Application.Current.Dispatcher.InvokeAsync(async () =>
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
         {
             await Task.Delay(FswDebounceMs);
             if (!File.Exists(e.FullPath)) return;
@@ -390,7 +390,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     private void OnFolderFileDeleted(object sender, FileSystemEventArgs e)
     {
         var watchedPath = (sender as FileSystemWatcher)?.Path;
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        Application.Current?.Dispatcher.InvokeAsync(() =>
         {
             var folder = SelectedFolder;
             if (folder == null || folder.FullPath != watchedPath) return;
@@ -407,7 +407,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     private void OnFolderFileRenamed(object sender, RenamedEventArgs e)
     {
         var watchedPath = (sender as FileSystemWatcher)?.Path;
-        Application.Current.Dispatcher.InvokeAsync(async () =>
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
         {
             var folder = SelectedFolder;
             if (folder == null || folder.FullPath != watchedPath) return;

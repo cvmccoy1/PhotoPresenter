@@ -314,4 +314,24 @@ public class MainWindowKeyTests
             Assert.Same(folderVm, vm.PresentVM.CurrentFolder);
         });
     }
+
+    [Fact]
+    public void HandleKeyDown_F5_WithSelectedFolderAndPhoto_PresentVmStartsAtCorrectItem()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            // MakeFolders(2, 3, 2) → 3 folders; folder[1] has 3 photos so Photos[2] is valid.
+            var folders = MakeFolders(2, 3, 2);
+            foreach (var f in folders) vm.OrganiseVM.Folders.Add(f);
+            vm.OrganiseVM.SelectedFolder = folders[1];
+            vm.OrganiseVM.SelectedPhoto  = folders[1].Photos[2];
+
+            window.HandleKeyDown(Key.F5, ModifierKeys.None);
+
+            Assert.Same(folders[1], vm.PresentVM.CurrentFolder);
+            Assert.Same(folders[1].Photos[2], vm.PresentVM.CurrentPhotoItem);
+        });
+    }
 }

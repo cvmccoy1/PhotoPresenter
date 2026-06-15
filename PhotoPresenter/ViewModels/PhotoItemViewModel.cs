@@ -100,7 +100,7 @@ public partial class PhotoItemViewModel : ObservableObject
         _ = LoadToolTipDetailAsync(fi);
     }
 
-    private async Task LoadToolTipDetailAsync(FileInfo fi)
+    internal async Task LoadToolTipDetailAsync(FileInfo fi)
     {
         string detail;
         if (IsVideo)
