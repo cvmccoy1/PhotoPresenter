@@ -589,4 +589,45 @@ public class PresentViewModelTests
 
         Assert.NotNull(vm.CurrentImage);
     }
+
+    [Fact]
+    public async Task NextPhoto_WhenPreloadAlreadyComplete_UsesPreloadedImageFastPath()
+    {
+        // This test explicitly waits for PreloadNextAsync to finish before calling
+        // NextPhoto, so the preloaded-image fast path (lines 204-219) is exercised.
+        using var tmp = new TempDirectory();
+        var path1 = tmp.CreateFile("pre1.jpg", TempDirectory.TinyJpegBytes);
+        var path2 = tmp.CreateFile("pre2.jpg", TempDirectory.TinyJpegBytes);
+        var folder = new PhotoFolder { Name = "F", FullPath = tmp.Path };
+        folder.Photos.Add(new PhotoItem { FileName = "pre1.jpg", FullPath = path1 });
+        folder.Photos.Add(new PhotoItem { FileName = "pre2.jpg", FullPath = path2 });
+
+        var vm = new PresentViewModel();
+
+        // Stage 1: wait for photo1 to load.
+        var first = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PresentViewModel.CurrentImage) && vm.CurrentImage != null)
+                first.TrySetResult(true);
+        };
+        vm.SetFolders(new List<PhotoFolderViewModel> { new PhotoFolderViewModel(folder) });
+        await first.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Allow PreloadNextAsync (fire-and-forget after photo1 loads) to finish loading
+        // photo2 into the internal cache before we navigate.
+        await Task.Delay(500);
+
+        // Stage 2: navigate — should use the preloaded cache (fast path, no Task.Run).
+        var second = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PresentViewModel.CurrentImage) && vm.CurrentImage != null)
+                second.TrySetResult(true);
+        };
+        vm.NextPhoto();
+        await second.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.NotNull(vm.CurrentImage);
+    }
 }
