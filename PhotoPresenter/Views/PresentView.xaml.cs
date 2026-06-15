@@ -13,6 +13,7 @@ public partial class PresentView : UserControl
     private readonly DispatcherTimer _positionTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private double _videoDurationSeconds;
     private bool _isDragging;
+    private bool _isTrackClick;
     private bool _mediaFailed;
 
     public PresentView()
@@ -26,7 +27,7 @@ public partial class PresentView : UserControl
         ScrubSlider.AddHandler(Thumb.DragCompletedEvent,
             new DragCompletedEventHandler(ScrubSlider_DragCompleted));
         ScrubSlider.PreviewMouseLeftButtonDown += ScrubSlider_PreviewMouseLeftButtonDown;
-        ScrubSlider.MouseLeftButtonUp          += ScrubSlider_MouseLeftButtonUp;
+        ScrubSlider.PreviewMouseLeftButtonUp   += ScrubSlider_PreviewMouseLeftButtonUp;
         ScrubSlider.ValueChanged               += ScrubSlider_ValueChanged;
     }
 
@@ -150,26 +151,62 @@ public partial class PresentView : UserControl
             VideoPlayer.Play();
     }
 
-    // Track click: also block the timer so it can't snap the slider back mid-click.
+    // Block the timer and detect whether this is a thumb drag or a track click.
+    // For track clicks: jump to the exact clicked position and suppress the
+    // RepeatButton's LargeChange command (which caused the jump-to-start/end behaviour).
     private void ScrubSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        => _isDragging = true;
-
-    // Live scrub: seek on each value change while _isDragging (thumb drag path).
-    private void ScrubSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_isDragging) return;
-        VideoPlayer.Position = TimeSpan.FromSeconds(e.NewValue);
+        _isDragging = true;
+        if (IsThumbHit(e.OriginalSource as DependencyObject))
+        {
+            _isTrackClick = false; // DragStarted/DragCompleted will handle this drag.
+        }
+        else
+        {
+            _isTrackClick = true;
+            if (ScrubSlider.Template.FindName("PART_Track", ScrubSlider) is Track track)
+                ScrubSlider.Value = track.ValueFromPoint(e.GetPosition(track));
+            e.Handled = true; // Suppress RepeatButton so it can't fire LargeChange.
+        }
     }
 
-    // Track click completion: DragCompleted fires before MouseLeftButtonUp for thumb drags
-    // and clears _isDragging, so _isDragging == true here only for track clicks.
-    private void ScrubSlider_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    // Track click completion. _isTrackClick is false for thumb drags (set in PreviewMouseLeftButtonDown),
+    // so this is a no-op for those — DragCompleted fires afterward and handles them.
+    private void ScrubSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (!_isDragging) return;
+        if (!_isTrackClick) return;
+        _isTrackClick = false;
         _isDragging = false;
         VideoPlayer.Position = TimeSpan.FromSeconds(ScrubSlider.Value);
         if (Vm?.IsPlaying == true)
             VideoPlayer.Play();
+    }
+
+    // Live scrub: seek on each value change while dragging.
+    // Also forces WMF to render the seeked frame when the video is paused (WMF does not
+    // update the displayed frame on a Position change alone without a Play/Pause cycle).
+    private void ScrubSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_isDragging) return;
+        var pos = TimeSpan.FromSeconds(e.NewValue);
+        VideoPlayer.Position = pos;
+        if (Vm?.IsPlaying == false && VideoPlayer.Source != null)
+        {
+            VideoPlayer.Play();
+            VideoPlayer.Pause();
+        }
+        if (VideoPlayer.NaturalDuration.HasTimeSpan)
+            Vm?.UpdatePosition(pos, VideoPlayer.NaturalDuration.TimeSpan);
+    }
+
+    private static bool IsThumbHit(DependencyObject? source)
+    {
+        while (source != null)
+        {
+            if (source is Thumb) return true;
+            source = VisualTreeHelper.GetParent(source);
+        }
+        return false;
     }
 
     private void PlayPause_Click(object sender, RoutedEventArgs e)
