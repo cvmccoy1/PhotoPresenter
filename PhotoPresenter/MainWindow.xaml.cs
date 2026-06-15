@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 using PhotoPresenter.Services;
@@ -166,6 +167,18 @@ public partial class MainWindow : Window
         {
             _vm.SwitchToPresentCommand.Execute(null);
             e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Space && _vm.CurrentMode == AppMode.Organise)
+        {
+            // Only intercept Space when the focused element doesn't already use it
+            // (buttons click, checkboxes toggle, dropdowns open — let those through).
+            if (Keyboard.FocusedElement is not (ButtonBase or ComboBox or TextBoxBase))
+            {
+                _vm.SwitchToPresentCommand.Execute(null);
+                e.Handled = true;
+            }
             return;
         }
 
