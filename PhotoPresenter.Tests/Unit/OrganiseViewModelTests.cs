@@ -798,4 +798,27 @@ public class OrganiseViewModelTests
         vm.SelectedFolder = null;
         Assert.Null(vm.Photos);
     }
+
+    // ── ApplyFolderSnapshot fallback (line 184) ───────────────────────────────────
+
+    [Fact]
+    public async Task Undo_WhenSelectedFolderAbsentFromRestoredFolders_FallsBackToFirstFolder()
+    {
+        // SortFoldersByName pushes an undo snapshot of the pre-sort state [B, A].
+        var vm = await BuildVm(MakeFolder("B"), MakeFolder("A"));
+        vm.SortFoldersByName(); // snapshot = {B, A}; Folders after = {A, B}
+
+        // Add a folder directly to Folders without going through a tracked operation.
+        // It will NOT appear in the undo snapshot.
+        var extraFolder = new PhotoFolderViewModel(
+            new PhotoFolder { Name = "C", FullPath = @"Z:\C" });
+        vm.Folders.Add(extraFolder);
+        vm.SelectedFolder = extraFolder; // SelectedFolder = C (not in snapshot)
+
+        vm.Undo(); // restores {B, A}; C is gone → ApplyFolderSnapshot line 184 fires
+
+        // SelectedFolder should fall back to the first folder in the restored list.
+        Assert.NotNull(vm.SelectedFolder);
+        Assert.Equal("B", vm.SelectedFolder!.Name);
+    }
 }

@@ -316,6 +316,26 @@ public class MainWindowKeyTests
     }
 
     [Fact]
+    public void HandleKeyDown_Space_InPresentMode_OnVideo_TogglesIsPlaying()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            vm.PresentVM.SetFolders(MakeFolders(1));
+            vm.CurrentMode = AppMode.Present;
+            // Directly set CurrentIsVideo to simulate a video being loaded.
+            vm.PresentVM.CurrentIsVideo = true;
+            vm.PresentVM.IsPlaying = false;
+
+            bool handled = window.HandleKeyDown(Key.Space, ModifierKeys.None);
+
+            Assert.True(handled);
+            Assert.True(vm.PresentVM.IsPlaying); // toggled from false → true
+        });
+    }
+
+    [Fact]
     public void HandleKeyDown_F5_WithSelectedFolderAndPhoto_PresentVmStartsAtCorrectItem()
     {
         _fixture.Invoke(() =>
