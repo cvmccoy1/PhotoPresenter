@@ -170,13 +170,19 @@ Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` wit
 Unit/
   FileClassificationTests.cs       — IsMediaFile, IsVideoFile
   SidecarParsingTests.cs           — ApplyFolderOrder, LoadPhotosForFolder (uses TempDirectory)
-  OrganiseViewModelTests.cs        — Reorder, Remove/Restore, Undo, SetCaption, ToggleMirrors
+  OrganiseViewModelTests.cs        — Reorder, Remove/Restore, Undo, SetCaption/SetCaptions, ToggleMirrors,
+                                      SortFoldersByName, SortPhotosByDateAsync, FolderCountLabel,
+                                      PhotoCountLabel, CurrentFolderItems/CurrentPhotoItems ShowAll filtering
                                       (mocked IPhotoLibraryService; LoadAsync(@"Z:\nonexistent") skips FSW)
   ExifOrientationTests.cs          — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
+  PhotoFolderViewModelTests.cs     — FolderToolTipText, UpdatePath cascade, constructor photo separation
   PhotoItemViewModelTests.cs       — HasThumbnail, EnsureThumbnailLoaded idempotency,
                                       RetryThumbnailAfterDelayAsync early-exit and pending-check, UpdatePath
-  PresentViewModelTests.cs         — OverallLabel format, cumulative-count correctness across folders,
-                                      start-position clamping, single-folder and empty edge cases
+  PresentViewModelTests.cs         — OverallLabel format, cumulative-count correctness, start-position clamping,
+                                      NextPhoto/PreviousPhoto navigation (incl. folder-boundary wrap),
+                                      ZoomIn/ZoomOut/ZoomByDelta bounds, BeginPan/UpdatePan, RotateVideo,
+                                      MirrorScaleX, HasCurrentCaption, PlayPauseIcon, UpdatePosition time format,
+                                      CurrentFolder/CurrentPhotoItem, SetFolders resets
   TextUtilsTests.cs                — NormalizeCaption
 Integration/
   SidecarRoundTripTests.cs      — real temp folders, save→load round-trips

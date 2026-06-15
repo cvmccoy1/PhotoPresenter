@@ -1,3 +1,4 @@
+using System.Windows;
 using PhotoPresenter.Models;
 using PhotoPresenter.ViewModels;
 using Xunit;
@@ -149,5 +150,378 @@ public class PresentViewModelTests
         vm.SetFolders(MakeFolders(5), startFolderIndex: 0, startPhotoIndex: 2);
 
         Assert.Equal("Item 3 of 5", vm.PhotoLabel);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Navigation — CurrentFolder / CurrentPhotoItem update synchronously
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void NextPhoto_AdvancesPhotoIndex()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3);
+        vm.SetFolders(folders, startFolderIndex: 0, startPhotoIndex: 0);
+
+        vm.NextPhoto();
+
+        Assert.Same(folders[0].Photos[1], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void NextPhoto_AtLastPhotoOfFolder_MovesToNextFolder()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3, 2);
+        vm.SetFolders(folders, startFolderIndex: 0, startPhotoIndex: 2);
+
+        vm.NextPhoto();
+
+        Assert.Same(folders[1], vm.CurrentFolder);
+        Assert.Same(folders[1].Photos[0], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void NextPhoto_AtLastPhotoOfLastFolder_WrapsToFirstFolder()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3, 2);
+        vm.SetFolders(folders, startFolderIndex: 1, startPhotoIndex: 1);
+
+        vm.NextPhoto();
+
+        Assert.Same(folders[0], vm.CurrentFolder);
+        Assert.Same(folders[0].Photos[0], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void PreviousPhoto_DecreasesPhotoIndex()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3);
+        vm.SetFolders(folders, startFolderIndex: 0, startPhotoIndex: 2);
+
+        vm.PreviousPhoto();
+
+        Assert.Same(folders[0].Photos[1], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void PreviousPhoto_AtFirstPhotoOfFolder_MovesToPreviousFolder()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3, 2);
+        vm.SetFolders(folders, startFolderIndex: 1, startPhotoIndex: 0);
+
+        vm.PreviousPhoto();
+
+        Assert.Same(folders[0], vm.CurrentFolder);
+        Assert.Same(folders[0].Photos[2], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void PreviousPhoto_AtFirstPhotoOfFirstFolder_WrapsToLastFolder()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3, 2);
+        vm.SetFolders(folders, startFolderIndex: 0, startPhotoIndex: 0);
+
+        vm.PreviousPhoto();
+
+        Assert.Same(folders[1], vm.CurrentFolder);
+        Assert.Same(folders[1].Photos[1], vm.CurrentPhotoItem);
+    }
+
+    // ---------------------------------------------------------------------------
+    // CurrentFolder / CurrentPhotoItem
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void CurrentFolder_ReturnsCurrentFolderViewModel()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(3, 5);
+        vm.SetFolders(folders, startFolderIndex: 1);
+
+        Assert.Same(folders[1], vm.CurrentFolder);
+    }
+
+    [Fact]
+    public void CurrentPhotoItem_ReturnsCurrentPhotoViewModel()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(5);
+        vm.SetFolders(folders, startFolderIndex: 0, startPhotoIndex: 2);
+
+        Assert.Same(folders[0].Photos[2], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void CurrentFolder_EmptyFolderList_ReturnsNull()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(new List<PhotoFolderViewModel>());
+
+        Assert.Null(vm.CurrentFolder);
+    }
+
+    [Fact]
+    public void CurrentPhotoItem_EmptyFolderList_ReturnsNull()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(new List<PhotoFolderViewModel>());
+
+        Assert.Null(vm.CurrentPhotoItem);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Zoom
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void ZoomIn_IncreasesZoomScale()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        var before = vm.ZoomScale;
+
+        vm.ZoomIn();
+
+        Assert.True(vm.ZoomScale > before);
+    }
+
+    [Fact]
+    public void ZoomOut_DecreasesZoomScale()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        vm.ZoomIn();
+        var after = vm.ZoomScale;
+
+        vm.ZoomOut();
+
+        Assert.True(vm.ZoomScale < after);
+    }
+
+    [Fact]
+    public void ZoomIn_CappedAt10()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        for (int i = 0; i < 40; i++) vm.ZoomIn();
+
+        Assert.Equal(10.0, vm.ZoomScale);
+    }
+
+    [Fact]
+    public void ZoomOut_CappedAtHalf()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        for (int i = 0; i < 30; i++) vm.ZoomOut();
+
+        Assert.Equal(0.5, vm.ZoomScale);
+    }
+
+    [Fact]
+    public void ZoomByDelta_Positive_ZoomsIn()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        var before = vm.ZoomScale;
+
+        vm.ZoomByDelta(120);
+
+        Assert.True(vm.ZoomScale > before);
+    }
+
+    [Fact]
+    public void ZoomByDelta_Negative_ZoomsOut()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+        vm.ZoomIn();
+        var after = vm.ZoomScale;
+
+        vm.ZoomByDelta(-120);
+
+        Assert.True(vm.ZoomScale < after);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Pan
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void BeginPan_ThenUpdatePan_SetsPanOffset()
+    {
+        var vm = new PresentViewModel();
+        vm.SetFolders(MakeFolders(1));
+
+        vm.BeginPan(new Point(100, 80));
+        vm.UpdatePan(new Point(150, 110));
+
+        Assert.Equal(50.0, vm.PanX);
+        Assert.Equal(30.0, vm.PanY);
+    }
+
+    [Fact]
+    public void SetFolders_ResetsPanToZero()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.BeginPan(new Point(0, 0));
+        vm.UpdatePan(new Point(50, 50));
+
+        vm.SetFolders(folders);
+
+        Assert.Equal(0.0, vm.PanX);
+        Assert.Equal(0.0, vm.PanY);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Video rotation
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void RotateVideo_IncreasesByNinety()
+    {
+        var vm = new PresentViewModel();
+        Assert.Equal(0.0, vm.VideoRotation);
+
+        vm.RotateVideo();
+
+        Assert.Equal(90.0, vm.VideoRotation);
+    }
+
+    [Fact]
+    public void RotateVideo_WrapsAfterFourTurns()
+    {
+        var vm = new PresentViewModel();
+        for (int i = 0; i < 4; i++) vm.RotateVideo();
+
+        Assert.Equal(0.0, vm.VideoRotation);
+    }
+
+    // ---------------------------------------------------------------------------
+    // SetFolders resets
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void SetFolders_ResetsZoomToOne()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.ZoomIn();
+        Assert.True(vm.ZoomScale > 1.0);
+
+        vm.SetFolders(folders);
+
+        Assert.Equal(1.0, vm.ZoomScale);
+    }
+
+    [Fact]
+    public void SetFolders_ResetsVideoRotationToZero()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.RotateVideo();
+        Assert.Equal(90.0, vm.VideoRotation);
+
+        vm.SetFolders(folders);
+
+        Assert.Equal(0.0, vm.VideoRotation);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Computed properties
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void MirrorScaleX_WhenNotMirrored_ReturnsOne()
+    {
+        var vm = new PresentViewModel();
+        vm.CurrentIsMirrored = false;
+
+        Assert.Equal(1.0, vm.MirrorScaleX);
+    }
+
+    [Fact]
+    public void MirrorScaleX_WhenMirrored_ReturnsNegativeOne()
+    {
+        var vm = new PresentViewModel();
+        vm.CurrentIsMirrored = true;
+
+        Assert.Equal(-1.0, vm.MirrorScaleX);
+    }
+
+    [Fact]
+    public void HasCurrentCaption_EmptyString_ReturnsFalse()
+    {
+        var vm = new PresentViewModel();
+        vm.CurrentCaption = "";
+
+        Assert.False(vm.HasCurrentCaption);
+    }
+
+    [Fact]
+    public void HasCurrentCaption_WithText_ReturnsTrue()
+    {
+        var vm = new PresentViewModel();
+        vm.CurrentCaption = "Summer 2025";
+
+        Assert.True(vm.HasCurrentCaption);
+    }
+
+    [Fact]
+    public void PlayPauseIcon_WhenNotPlaying_ShowsPlaySymbol()
+    {
+        var vm = new PresentViewModel();
+        vm.IsPlaying = false;
+
+        Assert.Equal("▶", vm.PlayPauseIcon);
+    }
+
+    [Fact]
+    public void PlayPauseIcon_WhenPlaying_ShowsPauseSymbol()
+    {
+        var vm = new PresentViewModel();
+        vm.IsPlaying = true;
+
+        Assert.Equal("⏸", vm.PlayPauseIcon);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Time formatting
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void UpdatePosition_SubHourDuration_FormatsMinutesAndSeconds()
+    {
+        var vm = new PresentViewModel();
+        vm.UpdatePosition(TimeSpan.FromSeconds(23), TimeSpan.FromSeconds(196));
+
+        Assert.Equal("0:23 / 3:16", vm.PositionLabel);
+    }
+
+    [Fact]
+    public void UpdatePosition_OverHourDuration_IncludesHours()
+    {
+        var vm = new PresentViewModel();
+        vm.UpdatePosition(TimeSpan.FromSeconds(3661), TimeSpan.FromSeconds(7200));
+
+        Assert.Equal("1:01:01 / 2:00:00", vm.PositionLabel);
+    }
+
+    [Fact]
+    public void UpdatePosition_ZeroDuration_FormatsAsZero()
+    {
+        var vm = new PresentViewModel();
+        vm.UpdatePosition(TimeSpan.Zero, TimeSpan.Zero);
+
+        Assert.Equal("0:00 / 0:00", vm.PositionLabel);
     }
 }
