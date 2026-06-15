@@ -57,7 +57,21 @@ Missing entries (renamed/deleted files) are silently skipped; unmentioned items 
 
 ### Key bindings
 
-Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise (syncs last-viewed folder/photo back to Organise mode). Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Space` (Organise mode) = enter Present mode, but only if `Keyboard.FocusedElement` is not a `ButtonBase`, `ComboBox`, or `TextBoxBase` (so toolbar controls still receive Space normally); `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise (syncs last-viewed folder/photo back to Organise mode). Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+
+### Overall counter
+
+`PresentViewModel` exposes `OverallLabel` (e.g. `"759 of 1956"`) showing the global position of the current item across all folders. `SetFolders` precomputes `_cumulativeCounts` (a `int[]` where `_cumulativeCounts[i]` = total photos in folders 0…i-1) and `_totalPhotoCount` in O(n) so that `UpdateLabels` can derive the overall 1-based position in O(1): `_cumulativeCounts[_currentFolderIndex] + _currentPhotoIndex + 1`. `UpdateLabels` is called synchronously by `SetFolders` and at the end of each `LoadCurrentPhotoAsync` completion. The label is shown in both the photo overlay (bottom-left) and the video controls bar.
+
+### Video scrub bar
+
+`PresentView.xaml.cs` wires five handlers on `ScrubSlider` (a `Slider` with `LoadedBehavior="Manual"` `MediaElement` as the target):
+
+- `Thumb.DragStartedEvent` / `DragCompletedEvent` (via `AddHandler`) — set/clear `_isDragging`; `DragCompleted` seeks and calls `VideoPlayer.Play()` if `Vm.IsPlaying`.
+- `PreviewMouseLeftButtonDown` — distinguishes thumb from track using `IsThumbHit` (walks the visual tree looking for a `Thumb` ancestor). For **track clicks**: uses `Track.ValueFromPoint(e.GetPosition(track))` on `PART_Track` to jump to the exact clicked position (suppressing the RepeatButton's `LargeChange` command via `e.Handled = true`), seeks `VideoPlayer.Position`, calls `VideoPlayer.Play(); VideoPlayer.Pause()` if paused (forces WMF to render the seeked frame — a Position change alone does not update the display when paused), and calls `Vm.UpdatePosition()` directly. For **thumb clicks**: sets `_isDragging = true` only; DragStarted/DragCompleted own the drag.
+- `ValueChanged` — live scrub during thumb drag: seeks and force-renders the frame while paused; also calls `Vm.UpdatePosition()` directly so the time label updates when the position timer is stopped (e.g. after `MediaEnded`).
+
+`MediaEnded` stops the position timer so the slider stays at the end position rather than snapping to 0. The `IsPlaying = true` branch of `OnVmPropertyChanged` calls `_positionTimer.Start()` to restart it when the user plays again after a completed video. **Important**: `ScrubSlider.PreviewMouseLeftButtonUp` must NOT be subscribed — in every attempt it has broken WMF video playback. The exact interaction is opaque, but the pattern is consistent.
 
 ### Zoom / Pan
 
@@ -161,6 +175,8 @@ Unit/
   ExifOrientationTests.cs          — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
   PhotoItemViewModelTests.cs       — HasThumbnail, EnsureThumbnailLoaded idempotency,
                                       RetryThumbnailAfterDelayAsync early-exit and pending-check, UpdatePath
+  PresentViewModelTests.cs         — OverallLabel format, cumulative-count correctness across folders,
+                                      start-position clamping, single-folder and empty edge cases
   TextUtilsTests.cs                — NormalizeCaption
 Integration/
   SidecarRoundTripTests.cs      — real temp folders, save→load round-trips

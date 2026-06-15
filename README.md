@@ -32,7 +32,8 @@ A Windows WPF application for presenting family photo and video collections on a
 - Thumbnails load on demand: folder-card thumbnails (left pane) load immediately on launch; photo thumbnails load when you click a folder, keeping startup fast even with thousands of files; decoded thumbnails are cached in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` so subsequent visits are near-instant
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - The app watches for external changes while it is running: if you rename a subfolder in Explorer, the new name appears immediately and the saved order is updated automatically; if a subfolder or photo is deleted externally, it is removed from the list and a brief notice appears; new photos copied into the selected folder appear automatically
-- Click a folder (and optionally an item) before switching to Present mode to start from that point; press **F5** (or click **▶ Present**) to enter Present mode; when you exit Present mode the last photo or video shown becomes the selected item in Organise mode, so pressing **F5** again picks up exactly where you left off
+- Click a folder (and optionally an item) before switching to Present mode to start from that point; press **Space**, **F5**, or click **▶ Present** to enter Present mode; when you exit Present mode the last photo or video shown becomes the selected item in Organise mode, so pressing **Space** or **F5** again picks up exactly where you left off
+  - **Space** and **F5** are intercepted only when a list item or the window background has focus; if a toolbar button, checkbox, or dropdown has keyboard focus, Space activates that control as normal
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
 - Choose a **color theme** and **text size** independently from the toolbar dropdowns; both are remembered between sessions and take effect immediately without a restart
   - **Theme**: Light (default), Dark, High Contrast Light, High Contrast Dark, Slate Blue, Forest, Sunset, Amethyst, Teal
@@ -53,8 +54,9 @@ A Windows WPF application for presenting family photo and video collections on a
   - **+** / **-** — zoom in / out
   - **Scroll wheel** — zoom in / out
   - **Click and drag** — pan a zoomed image
+- Overall counter — shows the global position of the current item across all folders (e.g. **759 of 1956**); displayed alongside the per-folder position for both photos and videos
 - Video playback controls (shown at the bottom of the screen):
-  - Scrub slider — drag to seek anywhere in the video
+  - Scrub slider — click anywhere on the track to jump to that position; drag the thumb for precise live scrubbing (the video frame updates as you drag)
   - **↺** — restart from the beginning
   - **▶ / ⏸** — play / pause
   - Position display — current time and total duration (e.g. 0:23 / 3:16)
