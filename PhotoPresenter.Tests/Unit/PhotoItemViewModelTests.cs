@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PhotoPresenter.Models;
+using PhotoPresenter.Tests.Infrastructure;
 using PhotoPresenter.ViewModels;
 
 namespace PhotoPresenter.Tests.Unit;
@@ -378,5 +379,49 @@ public class PhotoItemViewModelTests
         int result = PhotoItemViewModel.ReadOrientationFromMetadata(meta);
 
         Assert.Equal(8, result);
+    }
+
+    // ── LoadThumbnailAsync with real file (cache-miss path + semaphore + save) ─────
+
+    [Fact]
+    public async Task EnsureThumbnailLoaded_WithRealJpegFile_SetsThumbnailAsync()
+    {
+        using var tmp = new TempDirectory();
+        var path = tmp.CreateFile("thumb.jpg", TempDirectory.TinyJpegBytes);
+        var item = new PhotoItem { FileName = "thumb.jpg", FullPath = path };
+        var vm   = new PhotoItemViewModel(item);
+
+        var loaded = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PhotoItemViewModel.Thumbnail) && vm.Thumbnail != null)
+                loaded.TrySetResult(true);
+        };
+
+        vm.EnsureThumbnailLoaded();
+        await loaded.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.True(vm.HasThumbnail);
+    }
+
+    // ── RetryThumbnailAfterDelayAsync — body of first retry iteration ────────────
+
+    [Fact]
+    public async Task RetryThumbnailAfterDelayAsync_AfterFirstDelay_CallsLoadThumbnailAndChecksThumbnail()
+    {
+        // Covers lines 82-83 in the retry loop body: after the 2-second delay,
+        // LoadThumbnailAsync is called and then Thumbnail is re-checked.
+        // For a non-existent file LoadThumbnailAsync returns immediately (no thread pool
+        // dependency), making this test reliable even when the suite runs in parallel.
+        var vm = MakeVm(); // non-existent file path
+
+        var retryTask = vm.RetryThumbnailAfterDelayAsync();
+        // Wait slightly longer than the first 2-second loop delay so the body executes.
+        await Task.Delay(TimeSpan.FromSeconds(2.3));
+
+        // LoadThumbnailAsync returned early (file missing); Thumbnail is still null.
+        Assert.Null(vm.Thumbnail);
+        // The second iteration (3-second delay) hasn't finished — task is still running.
+        Assert.False(retryTask.IsCompleted);
     }
 }

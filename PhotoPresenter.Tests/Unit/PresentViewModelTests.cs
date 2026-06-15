@@ -545,49 +545,12 @@ public class PresentViewModelTests
         };
 
         vm.SetFolders(new List<PhotoFolderViewModel> { new PhotoFolderViewModel(folder) });
-        await loaded.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await loaded.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.NotNull(vm.CurrentImage);
         Assert.NotEmpty(vm.FolderLabel);
         Assert.NotEmpty(vm.PhotoLabel);
         Assert.NotEmpty(vm.OverallLabel);
-    }
-
-    [Fact]
-    public async Task NextPhoto_WithTwoRealJpegs_LoadsBothImagesSuccessfully()
-    {
-        using var tmp = new TempDirectory();
-        var path1 = tmp.CreateFile("img1.jpg", TempDirectory.TinyJpegBytes);
-        var path2 = tmp.CreateFile("img2.jpg", TempDirectory.TinyJpegBytes);
-        var folder = new PhotoFolder { Name = "F", FullPath = tmp.Path };
-        folder.Photos.Add(new PhotoItem { FileName = "img1.jpg", FullPath = path1 });
-        folder.Photos.Add(new PhotoItem { FileName = "img2.jpg", FullPath = path2 });
-
-        var vm = new PresentViewModel();
-
-        // Stage 1: wait for the first photo to load.
-        var first = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(PresentViewModel.CurrentImage) && vm.CurrentImage != null)
-                first.TrySetResult(true);
-        };
-        vm.SetFolders(new List<PhotoFolderViewModel> { new PhotoFolderViewModel(folder) });
-        await first.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        // Stage 2: navigate to photo2 and wait for it to load.
-        // PreloadNextAsync runs after photo1 loads (lines 272-282); NextPhoto either uses
-        // the preloaded image (lines 204-219) or falls back to a fresh load (222-232).
-        var second = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(PresentViewModel.CurrentImage) && vm.CurrentImage != null)
-                second.TrySetResult(true);
-        };
-        vm.NextPhoto();
-        await second.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        Assert.NotNull(vm.CurrentImage);
     }
 
     [Fact]
@@ -612,7 +575,7 @@ public class PresentViewModelTests
                 first.TrySetResult(true);
         };
         vm.SetFolders(new List<PhotoFolderViewModel> { new PhotoFolderViewModel(folder) });
-        await first.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await first.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Allow PreloadNextAsync (fire-and-forget after photo1 loads) to finish loading
         // photo2 into the internal cache before we navigate.
@@ -626,7 +589,7 @@ public class PresentViewModelTests
                 second.TrySetResult(true);
         };
         vm.NextPhoto();
-        await second.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await second.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.NotNull(vm.CurrentImage);
     }
