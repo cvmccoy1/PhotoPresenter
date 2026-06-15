@@ -177,4 +177,5 @@ public class MainWindowTests
             Assert.Same(folderVm.Photos[0], vm.OrganiseVM.SelectedPhoto);
         });
     }
+
 }
