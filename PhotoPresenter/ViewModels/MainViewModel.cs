@@ -48,7 +48,7 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Select the photo library folder"
+            Title = "Select parent folder"
         };
         if (dialog.ShowDialog() != true) return;
 

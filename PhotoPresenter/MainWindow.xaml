@@ -21,23 +21,26 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <ToolBarTray IsLocked="True" Background="{DynamicResource AppBackground}">
-                        <ToolBar Background="{DynamicResource AppBackground}"
-                                 Foreground="{DynamicResource PanelText}">
+                        <ToolBar Background="{DynamicResource AppBackground}">
                             <Button Content="↩ Undo"
                                     Click="Undo_Click"
                                     IsEnabled="{Binding OrganiseVM.CanUndo}"
+                                    Foreground="{DynamicResource PanelText}"
                                     Padding="6,3" Margin="2"/>
                             <Separator/>
                             <Button Content="Settings…"
                                     Click="Settings_Click"
+                                    Foreground="{DynamicResource PanelText}"
                                     Padding="6,3" Margin="2"/>
                             <Separator/>
                             <Button Content="Export Favorites…"
                                     Click="ExportFavorites_Click"
+                                    Foreground="{DynamicResource PanelText}"
                                     Padding="6,3" Margin="2"/>
                             <Separator/>
                             <Button Content="About"
                                     Click="About_Click"
+                                    Foreground="{DynamicResource PanelText}"
                                     Padding="6,3" Margin="2"/>
                         </ToolBar>
                     </ToolBarTray>
@@ -52,15 +55,16 @@
                             Command="{Binding SwitchToPresentCommand}"
                             Padding="8,3" Margin="2"
                             FontWeight="SemiBold"
+                            Background="{DynamicResource AppBackground}"
                             Foreground="{DynamicResource PanelText}"/>
                 </StackPanel>
             </Grid>
             <!-- Row 2: browse + current folder path -->
             <ToolBarTray IsLocked="True" Background="{DynamicResource AppBackground}">
-                <ToolBar Background="{DynamicResource AppBackground}"
-                         Foreground="{DynamicResource PanelText}">
-                    <Button Content="Browse Folder…"
+                <ToolBar Background="{DynamicResource AppBackground}">
+                    <Button Content="Parent Folder…"
                             Command="{Binding BrowseFolderCommand}"
+                            Foreground="{DynamicResource PanelText}"
                             Padding="6,3" Margin="2"/>
                     <Separator/>
                     <TextBlock Text="{Binding ParentFolderPath}"
