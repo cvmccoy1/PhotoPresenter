@@ -12,6 +12,10 @@ obj/
 *.nupkg
 packages/
 
+# Test results / coverage
+TestResults/
+coverage/
+
 # OS
 Thumbs.db
 .DS_Store
