@@ -207,6 +207,20 @@ public class SidecarParsingTests : IDisposable
     }
 
     [Fact]
+    public void LoadPhotosForFolder_FavoriteFlagApplied()
+    {
+        var dir = _tmp.CreateSubDir("FolderFav");
+        _tmp.CreateFile(@"FolderFav\a.jpg");
+        _tmp.CreateFile(@"FolderFav\b.jpg");
+        WritePhotoSidecar(dir, order: ["a.jpg", "b.jpg"], favorites: ["a.jpg"]);
+
+        var photos = PhotoLibraryService.LoadPhotosForFolder(dir);
+
+        Assert.True(photos.First(p => p.FileName == "a.jpg").IsFavorite);
+        Assert.False(photos.First(p => p.FileName == "b.jpg").IsFavorite);
+    }
+
+    [Fact]
     public void LoadPhotosForFolder_NonMediaFilesIgnored()
     {
         var dir = _tmp.CreateSubDir("FolderH");
@@ -263,14 +277,16 @@ public class SidecarParsingTests : IDisposable
         IEnumerable<string>? order = null,
         IEnumerable<string>? removed = null,
         Dictionary<string, string>? captions = null,
-        IEnumerable<string>? mirrored = null)
+        IEnumerable<string>? mirrored = null,
+        IEnumerable<string>? favorites = null)
     {
         var sidecar = new
         {
-            order    = order?.ToList() ?? new List<string>(),
-            removed  = removed?.ToList() ?? new List<string>(),
+            order     = order?.ToList() ?? new List<string>(),
+            removed   = removed?.ToList() ?? new List<string>(),
             captions,
-            mirrored = mirrored?.ToList()
+            mirrored  = mirrored?.ToList(),
+            favorites = favorites?.ToList()
         };
         File.WriteAllText(
             System.IO.Path.Combine(folderPath, "_photoorder.json"),

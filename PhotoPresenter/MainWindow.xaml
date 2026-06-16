@@ -19,40 +19,47 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <ToolBarTray Grid.Column="0" IsLocked="True">
-                    <ToolBar>
-                        <Button Content="↩ Undo"
-                                Click="Undo_Click"
-                                IsEnabled="{Binding OrganiseVM.CanUndo}"
-                                Padding="6,3" Margin="2"/>
-                        <Separator/>
-                        <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="4,0,2,0"
-                                   FontSize="11" Foreground="#555"/>
-                        <ComboBox x:Name="ThemeComboBox" Width="155" VerticalAlignment="Center">
-                            <ComboBoxItem Tag="Light">Light</ComboBoxItem>
-                            <ComboBoxItem Tag="Dark">Dark</ComboBoxItem>
-                            <ComboBoxItem Tag="HighContrastLight">High Contrast Light</ComboBoxItem>
-                            <ComboBoxItem Tag="HighContrastDark">High Contrast Dark</ComboBoxItem>
-                            <ComboBoxItem Tag="SlateBlue">Slate Blue</ComboBoxItem>
-                            <ComboBoxItem Tag="Forest">Forest</ComboBoxItem>
-                            <ComboBoxItem Tag="Sunset">Sunset</ComboBoxItem>
-                            <ComboBoxItem Tag="Amethyst">Amethyst</ComboBoxItem>
-                            <ComboBoxItem Tag="Teal">Teal</ComboBoxItem>
-                        </ComboBox>
-                        <TextBlock Text="Text:" VerticalAlignment="Center" Margin="8,0,2,0"
-                                   FontSize="11" Foreground="#555"/>
-                        <ComboBox x:Name="TextComboBox" Width="100" VerticalAlignment="Center">
-                            <ComboBoxItem Tag="Small">Small</ComboBoxItem>
-                            <ComboBoxItem Tag="Normal">Normal</ComboBoxItem>
-                            <ComboBoxItem Tag="Large">Large</ComboBoxItem>
-                            <ComboBoxItem Tag="XLarge">Extra Large</ComboBoxItem>
-                        </ComboBox>
-                        <Separator/>
-                        <Button Content="About"
-                                Click="About_Click"
-                                Padding="6,3" Margin="2"/>
-                    </ToolBar>
-                </ToolBarTray>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToolBarTray IsLocked="True">
+                        <ToolBar>
+                            <Button Content="↩ Undo"
+                                    Click="Undo_Click"
+                                    IsEnabled="{Binding OrganiseVM.CanUndo}"
+                                    Padding="6,3" Margin="2"/>
+                            <Separator/>
+                            <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="4,0,2,0"
+                                       FontSize="11" Foreground="#555"/>
+                            <ComboBox x:Name="ThemeComboBox" Width="155" VerticalAlignment="Center">
+                                <ComboBoxItem Tag="Light">Light</ComboBoxItem>
+                                <ComboBoxItem Tag="Dark">Dark</ComboBoxItem>
+                                <ComboBoxItem Tag="HighContrastLight">High Contrast Light</ComboBoxItem>
+                                <ComboBoxItem Tag="HighContrastDark">High Contrast Dark</ComboBoxItem>
+                                <ComboBoxItem Tag="SlateBlue">Slate Blue</ComboBoxItem>
+                                <ComboBoxItem Tag="Forest">Forest</ComboBoxItem>
+                                <ComboBoxItem Tag="Sunset">Sunset</ComboBoxItem>
+                                <ComboBoxItem Tag="Amethyst">Amethyst</ComboBoxItem>
+                                <ComboBoxItem Tag="Teal">Teal</ComboBoxItem>
+                            </ComboBox>
+                            <TextBlock Text="Text:" VerticalAlignment="Center" Margin="8,0,2,0"
+                                       FontSize="11" Foreground="#555"/>
+                            <ComboBox x:Name="TextComboBox" Width="100" VerticalAlignment="Center">
+                                <ComboBoxItem Tag="Small">Small</ComboBoxItem>
+                                <ComboBoxItem Tag="Normal">Normal</ComboBoxItem>
+                                <ComboBoxItem Tag="Large">Large</ComboBoxItem>
+                                <ComboBoxItem Tag="XLarge">Extra Large</ComboBoxItem>
+                            </ComboBox>
+                            <Separator/>
+                            <Button Content="About"
+                                    Click="About_Click"
+                                    Padding="6,3" Margin="2"/>
+                        </ToolBar>
+                    </ToolBarTray>
+                    <CheckBox Content="Fade Transitions"
+                              IsChecked="{Binding PresentVM.IsFadeEnabled}"
+                              VerticalAlignment="Center"
+                              Margin="10,0,0,0"
+                              FontSize="11" Foreground="#555"/>
+                </StackPanel>
                 <ToolBarTray Grid.Column="1" IsLocked="True">
                     <ToolBar>
                         <Button Content="▶  Present"

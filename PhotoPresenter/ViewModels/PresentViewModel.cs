@@ -54,6 +54,9 @@ public partial class PresentViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MirrorScaleX))]
     private bool _currentIsMirrored;
 
+    [ObservableProperty] private bool _isAutoplayEnabled;
+    [ObservableProperty] private bool _isFadeEnabled = true;
+
     public double MirrorScaleX => CurrentIsMirrored ? -1.0 : 1.0;
 
     public bool HasCurrentCaption => !string.IsNullOrEmpty(CurrentCaption);
@@ -88,6 +91,7 @@ public partial class PresentViewModel : ObservableObject
         PositionLabel = "";
         VideoRotation = 0;
         CurrentIsMirrored = false;
+        IsAutoplayEnabled = false;
         ResetZoomPan();
         UpdateLabels();
         if (_allFolders.Count > 0 && CurrentPhotos.Count > 0)

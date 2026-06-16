@@ -298,6 +298,32 @@ public class OrganiseViewModelTests
         Assert.False(photo.IsMirrored);
     }
 
+    [Fact]
+    public async Task ToggleFavorites_SetsFavoriteFlag()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        var photo = vm.SelectedFolder.Photos[0];
+        Assert.False(photo.IsFavorite);
+
+        vm.ToggleFavorites([photo]);
+
+        Assert.True(photo.IsFavorite);
+    }
+
+    [Fact]
+    public async Task ToggleFavorites_UnsetsFavoriteFlag()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        var photo = vm.SelectedFolder.Photos[0];
+        vm.ToggleFavorites([photo]);
+
+        vm.ToggleFavorites([photo]);
+
+        Assert.False(photo.IsFavorite);
+    }
+
     // ── Undo ─────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -349,6 +375,19 @@ public class OrganiseViewModelTests
         vm.Undo();
 
         Assert.False(photo.IsMirrored);
+    }
+
+    [Fact]
+    public async Task Undo_AfterToggleFavorite_RestoresFavoriteState()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        var photo = vm.SelectedFolder.Photos[0];
+        vm.ToggleFavorites([photo]);
+
+        vm.Undo();
+
+        Assert.False(photo.IsFavorite);
     }
 
     [Fact]

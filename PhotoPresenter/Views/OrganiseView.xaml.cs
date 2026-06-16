@@ -156,11 +156,32 @@ public partial class OrganiseView : UserControl
 
     private void FolderList_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && Vm != null)
+        if (Vm == null) return;
+
+        if (e.Key == Key.Delete)
         {
             Vm.RemoveFolders(FolderList.SelectedItems.OfType<PhotoFolderViewModel>().ToList());
             e.Handled = true;
+            return;
         }
+
+        if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.P)
+        {
+            TogglePresenceForFolderSelection();
+            e.Handled = true;
+        }
+    }
+
+    // P toggles remove/restore: if any selected folder is still included, remove those;
+    // only restores when every selected folder is already removed (mirrors the M/F priority).
+    private void TogglePresenceForFolderSelection()
+    {
+        var selected = FolderList.SelectedItems.OfType<PhotoFolderViewModel>().ToList();
+        if (selected.Count == 0) return;
+        if (selected.Any(f => !f.IsRemoved))
+            Vm?.RemoveFolders(selected);
+        else
+            Vm?.RestoreFolders(selected);
     }
 
     private void FolderList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -343,11 +364,76 @@ public partial class OrganiseView : UserControl
 
     private void PhotoList_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && Vm != null)
+        if (Vm == null) return;
+
+        if (e.Key == Key.Delete)
         {
             Vm.RemovePhotos(PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList());
             e.Handled = true;
+            return;
         }
+
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
+
+        switch (e.Key)
+        {
+            case Key.M:
+                ToggleMirrorForSelection();
+                e.Handled = true;
+                break;
+            case Key.F:
+                ToggleFavoriteForSelection();
+                e.Handled = true;
+                break;
+            case Key.P:
+                TogglePresenceForSelection();
+                e.Handled = true;
+                break;
+            case Key.C:
+                PhotoCaptionSet_Click(sender, e);
+                e.Handled = true;
+                break;
+            case Key.D:
+                DeleteCaptionForSelection();
+                e.Handled = true;
+                break;
+        }
+    }
+
+    // M/F toggle direction matches the context menu: if any selected item still needs
+    // the flag set, set it on those; only unset for all when every item already has it.
+    private void ToggleMirrorForSelection()
+    {
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
+        if (selected.Count == 0) return;
+        var applicable = selected.Any(p => !p.IsMirrored) ? selected.Where(p => !p.IsMirrored).ToList() : selected;
+        Vm?.ToggleMirrors(applicable);
+    }
+
+    private void ToggleFavoriteForSelection()
+    {
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
+        if (selected.Count == 0) return;
+        var applicable = selected.Any(p => !p.IsFavorite) ? selected.Where(p => !p.IsFavorite).ToList() : selected;
+        Vm?.ToggleFavorites(applicable);
+    }
+
+    // P toggles remove/restore: if any selected photo is still included, remove those;
+    // only restores when every selected photo is already removed (mirrors the M/F priority).
+    private void TogglePresenceForSelection()
+    {
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
+        if (selected.Count == 0) return;
+        if (selected.Any(p => !p.IsRemoved))
+            Vm?.RemovePhotos(selected);
+        else
+            Vm?.RestorePhotos(selected);
+    }
+
+    private void DeleteCaptionForSelection()
+    {
+        var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().Where(p => p.HasCaption).ToList();
+        if (selected.Count > 0) Vm?.SetCaptions(selected, "");
     }
 
     private void PhotoList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -506,6 +592,18 @@ public partial class OrganiseView : UserControl
             Vm.ToggleMirrors(applicable);
     }
 
+    private void PhotoFavorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        var targets = SelectedTargets<PhotoItemViewModel>(PhotoList, sender);
+        bool isFavoriteAction = sender is MenuItem { Tag: "Favorite" };
+        var applicable = isFavoriteAction
+            ? targets.Where(p => !p.IsFavorite).ToList()
+            : targets.Where(p =>  p.IsFavorite).ToList();
+        if (applicable.Count > 0)
+            Vm.ToggleFavorites(applicable);
+    }
+
     private void PhotoRemove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm == null) return;
@@ -541,6 +639,12 @@ public partial class OrganiseView : UserControl
         bool anyNotMirrored = selected.Any(p => !p.IsMirrored);
         SetMenuItemVisibility(cm, "Mirror",       anyNotMirrored ? Visibility.Visible : Visibility.Collapsed);
         SetMenuItemVisibility(cm, "RemoveMirror", anyMirrored    ? Visibility.Visible : Visibility.Collapsed);
+
+        // Favorite / Remove Favorite — toggle each independently; show whichever apply.
+        bool anyFavorited    = selected.Any(p =>  p.IsFavorite);
+        bool anyNotFavorited = selected.Any(p => !p.IsFavorite);
+        SetMenuItemVisibility(cm, "Favorite",       anyNotFavorited ? Visibility.Visible : Visibility.Collapsed);
+        SetMenuItemVisibility(cm, "RemoveFavorite", anyFavorited    ? Visibility.Visible : Visibility.Collapsed);
 
         // Remove / Restore — based on whether any are visible or hidden.
         bool anyVisible = selected.Any(p => !p.IsRemoved);

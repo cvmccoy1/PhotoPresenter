@@ -62,7 +62,8 @@
             <Grid.RenderTransform>
                 <TranslateTransform X="{Binding PanX}" Y="{Binding PanY}"/>
             </Grid.RenderTransform>
-            <Image Source="{Binding CurrentImage}"
+            <Image x:Name="PhotoImage"
+                   Source="{Binding CurrentImage}"
                    Stretch="Uniform"
                    RenderTransformOrigin="0.5,0.5">
                 <Image.RenderTransform>
@@ -196,8 +197,30 @@
                 </Style>
             </Border.Style>
             <TextBlock Foreground="#888" FontSize="{DynamicResource FontSize.Small}" FontFamily="Segoe UI">
-                ← → Space · +/- scroll · drag pan · Esc
+                ← → Space · +/- scroll · drag pan · P autoplay · Esc
             </TextBlock>
+        </Border>
+
+        <!-- Autoplay indicator (top-right, hidden for video and when autoplay is off) -->
+        <Border VerticalAlignment="Top"
+                HorizontalAlignment="Right"
+                Background="#99000000"
+                CornerRadius="3"
+                Padding="8,4"
+                Margin="0,16,16,0"
+                IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsAutoplayEnabled}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="▶ Autoplay (P to stop)" Foreground="#0F0"
+                       FontSize="{DynamicResource FontSize.Small}" FontFamily="Segoe UI"/>
         </Border>
 
         <!-- Caption overlay (bottom-centre, above controls, both modes) -->

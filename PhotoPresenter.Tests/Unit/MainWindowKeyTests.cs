@@ -248,6 +248,43 @@ public class MainWindowKeyTests
         });
     }
 
+    // ── Present mode — autoplay toggle ───────────────────────────────────────────
+
+    [Fact]
+    public void HandleKeyDown_P_InPresentMode_TogglesIsAutoplayEnabled()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            vm.PresentVM.SetFolders(MakeFolders(1));
+            vm.CurrentMode = AppMode.Present;
+            Assert.False(vm.PresentVM.IsAutoplayEnabled);
+
+            bool handled = window.HandleKeyDown(Key.P, ModifierKeys.None);
+
+            Assert.True(handled);
+            Assert.True(vm.PresentVM.IsAutoplayEnabled);
+        });
+    }
+
+    [Fact]
+    public void HandleKeyDown_P_InPresentMode_TwiceTogglesBackOff()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            vm.PresentVM.SetFolders(MakeFolders(1));
+            vm.CurrentMode = AppMode.Present;
+
+            window.HandleKeyDown(Key.P, ModifierKeys.None);
+            window.HandleKeyDown(Key.P, ModifierKeys.None);
+
+            Assert.False(vm.PresentVM.IsAutoplayEnabled);
+        });
+    }
+
     // ── Present mode — Escape ─────────────────────────────────────────────────────
 
     [Fact]

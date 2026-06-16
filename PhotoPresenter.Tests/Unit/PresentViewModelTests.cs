@@ -437,6 +437,49 @@ public class PresentViewModelTests
         Assert.Equal(0.0, vm.VideoRotation);
     }
 
+    [Fact]
+    public void IsAutoplayEnabled_DefaultsToFalse()
+    {
+        var vm = new PresentViewModel();
+
+        Assert.False(vm.IsAutoplayEnabled);
+    }
+
+    [Fact]
+    public void SetFolders_ResetsIsAutoplayEnabledToFalse()
+    {
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.IsAutoplayEnabled = true;
+
+        vm.SetFolders(folders);
+
+        Assert.False(vm.IsAutoplayEnabled);
+    }
+
+    [Fact]
+    public void IsFadeEnabled_DefaultsToTrue()
+    {
+        var vm = new PresentViewModel();
+
+        Assert.True(vm.IsFadeEnabled);
+    }
+
+    [Fact]
+    public void SetFolders_DoesNotResetIsFadeEnabled()
+    {
+        // Unlike autoplay, fade is a persistent display preference, not per-session state.
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.IsFadeEnabled = false;
+
+        vm.SetFolders(folders);
+
+        Assert.False(vm.IsFadeEnabled);
+    }
+
     // ---------------------------------------------------------------------------
     // Computed properties
     // ---------------------------------------------------------------------------

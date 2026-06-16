@@ -171,6 +171,14 @@ public class PhotoItemViewModelTests
         Assert.True(vm.Model.IsMirrored);
     }
 
+    [Fact]
+    public void IsFavorite_SyncedToModel()
+    {
+        var vm = MakeVm();
+        vm.IsFavorite = true;
+        Assert.True(vm.Model.IsFavorite);
+    }
+
     // ── EnsureToolTipLoaded ───────────────────────────────────────────────────────
 
     [Fact]
@@ -250,6 +258,28 @@ public class PhotoItemViewModelTests
     }
 
     [Fact]
+    public void EnsureToolTipLoaded_WhenFavorite_ContainsFavoriteLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg", IsFavorite = true };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Favorite: Yes", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_WhenNotFavorite_DoesNotContainFavoriteLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg", IsFavorite = false };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.DoesNotContain("Favorite", vm.ToolTipText);
+    }
+
+    [Fact]
     public void EnsureToolTipLoaded_IsIdempotent_SecondCallDoesNotReloadText()
     {
         var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
@@ -275,6 +305,21 @@ public class PhotoItemViewModelTests
         vm.EnsureToolTipLoaded();
 
         Assert.Contains("Mirrored: Yes", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void IsFavoriteChanged_ResetsToolTipSoNextLoadReflectsFavoriteState()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+        vm.EnsureToolTipLoaded();
+        Assert.DoesNotContain("Favorite", vm.ToolTipText);
+
+        // Changing IsFavorite resets _toolTipLoaded, so the next call reloads.
+        vm.IsFavorite = true;
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Favorite: Yes", vm.ToolTipText);
     }
 
     // ── FormatSize ────────────────────────────────────────────────────────────────

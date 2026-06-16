@@ -12,6 +12,7 @@ public class UserSettings
     public bool ShowAllFolders { get; set; } = false;
     public bool ShowAllPhotos { get; set; } = false;
     public double Volume { get; set; } = 0.5;
+    public bool FadeTransitionEnabled { get; set; } = true;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
     public double? WindowWidth { get; set; }

@@ -8,5 +8,6 @@ public class PhotoItem
     public bool IsRemoved { get; set; }
     public bool IsVideo { get; set; }
     public bool IsMirrored { get; set; }
+    public bool IsFavorite { get; set; }
     public string Caption { get; set; } = "";
 }

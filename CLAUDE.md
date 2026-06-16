@@ -23,6 +23,7 @@ The UTC build date (formatted `MM-dd-yyyy`) is embedded as an `AssemblyMetadataA
 
 - Any new feature or behavior change must come with corresponding test coverage in `PhotoPresenter.Tests/` (see `## Tests` below for structure and conventions).
 - Before considering a change complete, run the full suite — `dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj` — and confirm all tests pass.
+- Before implementing any requested change, ask clarifying questions until at least 99% sure of what is being asked — even if it takes multiple rounds of questions. Only skip this when the request is already fully unambiguous.
 
 ## Architecture
 

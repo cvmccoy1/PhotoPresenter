@@ -115,6 +115,7 @@ public partial class MainWindow : Window
         settings.ShowAllFolders     = _vm.OrganiseVM.ShowAllFolders;
         settings.ShowAllPhotos      = _vm.OrganiseVM.ShowAllPhotos;
         settings.Volume             = _vm.PresentVM.Volume;
+        settings.FadeTransitionEnabled = _vm.PresentVM.IsFadeEnabled;
         if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
             settings.Theme = (string)themeItem.Tag;
         if (TextComboBox.SelectedItem is ComboBoxItem textItem)
@@ -214,6 +215,9 @@ public partial class MainWindow : Window
                 return true;
             case Key.Escape:
                 _vm.SwitchToOrganise();
+                return true;
+            case Key.P:
+                pvm.IsAutoplayEnabled = !pvm.IsAutoplayEnabled;
                 return true;
         }
         return false;

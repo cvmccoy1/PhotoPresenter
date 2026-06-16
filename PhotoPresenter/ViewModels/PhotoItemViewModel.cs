@@ -29,6 +29,7 @@ public partial class PhotoItemViewModel : ObservableObject
     private string _caption = "";
 
     [ObservableProperty] private bool   _isMirrored;
+    [ObservableProperty] private bool   _isFavorite;
     [ObservableProperty] private string _toolTipText = "";
 
     public bool HasCaption    => !string.IsNullOrEmpty(Caption);
@@ -39,6 +40,11 @@ public partial class PhotoItemViewModel : ObservableObject
     partial void OnIsMirroredChanged(bool value)
     {
         Model.IsMirrored = value;
+        _toolTipLoaded = false;
+    }
+    partial void OnIsFavoriteChanged(bool value)
+    {
+        Model.IsFavorite = value;
         _toolTipLoaded = false;
     }
 
@@ -59,6 +65,7 @@ public partial class PhotoItemViewModel : ObservableObject
         _isRemoved  = model.IsRemoved;
         _caption    = model.Caption;
         _isMirrored = model.IsMirrored;
+        _isFavorite = model.IsFavorite;
         // Thumbnails are loaded on demand via EnsureThumbnailLoaded().
     }
 
@@ -149,10 +156,13 @@ public partial class PhotoItemViewModel : ObservableObject
         catch { return "Unknown"; }
     }
 
-    private string BuildToolTipText(string ext, string date, string detail, string size) =>
-        IsMirrored
-            ? $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}\nMirrored: Yes"
-            : $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+    private string BuildToolTipText(string ext, string date, string detail, string size)
+    {
+        string text = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
+        if (IsMirrored) text += "\nMirrored: Yes";
+        if (IsFavorite) text += "\nFavorite: Yes";
+        return text;
+    }
 
     internal static string FormatSize(long bytes)
     {

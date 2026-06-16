@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using PhotoPresenter.ViewModels;
 
@@ -10,7 +11,10 @@ namespace PhotoPresenter.Views;
 
 public partial class PresentView : UserControl
 {
+    private static readonly TimeSpan AutoplayInterval = TimeSpan.FromSeconds(5);
+
     private readonly DispatcherTimer _positionTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
+    private readonly DispatcherTimer _autoplayTimer = new() { Interval = AutoplayInterval };
     private double _videoDurationSeconds;
     private bool _isDragging;
     private bool _mediaFailed;
@@ -19,6 +23,7 @@ public partial class PresentView : UserControl
     {
         InitializeComponent();
         _positionTimer.Tick += PositionTimer_Tick;
+        _autoplayTimer.Tick += AutoplayTimer_Tick;
         DataContextChanged += OnDataContextChanged;
 
         ScrubSlider.AddHandler(Thumb.DragStartedEvent,
@@ -51,6 +56,7 @@ public partial class PresentView : UserControl
                     VideoPlayer.Source = null;
                     HideVideoError();
                 }
+                UpdateAutoplayTimerState();
                 break;
 
             case nameof(PresentViewModel.CurrentVideoPath):
@@ -83,7 +89,41 @@ public partial class PresentView : UserControl
                     }
                 }
                 break;
+
+            case nameof(PresentViewModel.IsAutoplayEnabled):
+                UpdateAutoplayTimerState();
+                break;
+
+            case nameof(PresentViewModel.CurrentImage):
+                if (Vm?.CurrentIsVideo == false && Vm.CurrentImage != null)
+                    FadeInPhoto();
+                UpdateAutoplayTimerState();
+                break;
         }
+    }
+
+    // Photos auto-advance on a fixed timer; videos advance via MediaEnded instead
+    // so they always play to completion before the next item loads.
+    private void UpdateAutoplayTimerState()
+    {
+        if (Vm?.IsAutoplayEnabled == true && Vm.CurrentIsVideo == false)
+            _autoplayTimer.Start();
+        else
+            _autoplayTimer.Stop();
+    }
+
+    private void AutoplayTimer_Tick(object? sender, EventArgs e) => Vm?.NextPhoto();
+
+    private void FadeInPhoto()
+    {
+        if (Vm?.IsFadeEnabled != true)
+        {
+            PhotoImage.BeginAnimation(UIElement.OpacityProperty, null);
+            PhotoImage.Opacity = 1;
+            return;
+        }
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250));
+        PhotoImage.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
     private void PositionTimer_Tick(object? sender, EventArgs e)
@@ -113,6 +153,8 @@ public partial class PresentView : UserControl
     {
         if (Vm != null) Vm.IsPlaying = false;
         _positionTimer.Stop();
+        if (Vm?.IsAutoplayEnabled == true)
+            Vm.NextPhoto();
     }
 
     private void VideoPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)

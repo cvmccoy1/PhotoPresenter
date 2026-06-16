@@ -14,4 +14,5 @@ public class PhotoOrderSidecar
     [JsonPropertyName("removed")]  public List<string>                Removed  { get; set; } = new();
     [JsonPropertyName("captions")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, string>? Captions { get; set; }
     [JsonPropertyName("mirrored")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<string>?               Mirrored { get; set; }
+    [JsonPropertyName("favorites")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<string>?              Favorites { get; set; }
 }

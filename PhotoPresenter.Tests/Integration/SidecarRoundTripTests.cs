@@ -84,6 +84,21 @@ public class SidecarRoundTripTests : IDisposable
     }
 
     [Fact]
+    public async Task SavePhotoOrder_ThenLoad_PreservesFavoriteFlag()
+    {
+        var dir = _tmp.CreateSubDir("FolderFavA");
+        _tmp.CreateFile(@"FolderFavA\a.jpg");
+        var folder = MakeFolder(dir, "a.jpg");
+        folder.Photos[0].IsFavorite = true;
+        _service.SavePhotoOrder(folder, folder.Photos);
+
+        var loaded = await _service.LoadLibraryAsync(_tmp.Path);
+        var photo = loaded.Single(f => f.Name == "FolderFavA").Photos.Single();
+
+        Assert.True(photo.IsFavorite);
+    }
+
+    [Fact]
     public void SavePhotoOrder_NoCaptions_CaptionsKeyAbsentInJson()
     {
         var dir = _tmp.CreateSubDir("FolderE");
@@ -109,6 +124,20 @@ public class SidecarRoundTripTests : IDisposable
         using var doc = JsonDocument.Parse(json);
 
         Assert.False(doc.RootElement.TryGetProperty("mirrored", out _));
+    }
+
+    [Fact]
+    public void SavePhotoOrder_NoFavorites_FavoritesKeyAbsentInJson()
+    {
+        var dir = _tmp.CreateSubDir("FolderFavB");
+        _tmp.CreateFile(@"FolderFavB\a.jpg");
+        var folder = MakeFolder(dir, "a.jpg"); // not favorited
+        _service.SavePhotoOrder(folder, folder.Photos);
+
+        var json = File.ReadAllText(System.IO.Path.Combine(dir, "_photoorder.json"));
+        using var doc = JsonDocument.Parse(json);
+
+        Assert.False(doc.RootElement.TryGetProperty("favorites", out _));
     }
 
     [Fact]

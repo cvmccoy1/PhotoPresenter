@@ -120,13 +120,13 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private sealed record PhotoSnapshot(
         PhotoFolderViewModel Folder,
-        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> Items);
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored, bool IsFavorite)> Items);
 
     private sealed record CrossFolderMoveSnapshot(
         PhotoFolderViewModel SourceFolder,
-        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> SourceItems,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored, bool IsFavorite)> SourceItems,
         PhotoFolderViewModel DestFolder,
-        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> DestItems,
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored, bool IsFavorite)> DestItems,
         IReadOnlyList<(PhotoItemViewModel Vm, string OriginalPath, string OriginalFileName)> MovedPaths);
 
     private readonly List<object> _undoStack = new();
@@ -144,7 +144,7 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
     private void PushPhotoUndo(PhotoFolderViewModel folder)
     {
         _undoStack.Add(new PhotoSnapshot(folder,
-            folder.AllPhotoItems.Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray()));
+            folder.AllPhotoItems.Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored, p.IsFavorite)).ToArray()));
         if (_undoStack.Count > MaxUndoDepth) _undoStack.RemoveAt(0);
         OnPropertyChanged(nameof(CanUndo));
     }
@@ -195,15 +195,16 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
 
     private static void RestoreFolderItems(
         PhotoFolderViewModel folder,
-        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored)> items)
+        IReadOnlyList<(PhotoItemViewModel Vm, bool IsRemoved, string Caption, bool IsMirrored, bool IsFavorite)> items)
     {
         folder.Photos.Clear();
         folder.AllPhotoItems.Clear();
-        foreach (var (vm, wasRemoved, caption, wasMirrored) in items)
+        foreach (var (vm, wasRemoved, caption, wasMirrored, wasFavorite) in items)
         {
             vm.IsRemoved  = wasRemoved;
             vm.Caption    = caption;
             vm.IsMirrored = wasMirrored;
+            vm.IsFavorite = wasFavorite;
             folder.AllPhotoItems.Add(vm);
             if (!wasRemoved) folder.Photos.Add(vm);
         }
@@ -689,6 +690,15 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         SaveAllPhotoOrder(SelectedFolder);
     }
 
+    public void ToggleFavorites(IList<PhotoItemViewModel> photos)
+    {
+        if (SelectedFolder == null || photos.Count == 0) return;
+        PushPhotoUndo(SelectedFolder);
+        foreach (var p in photos)
+            p.IsFavorite = !p.IsFavorite;
+        SaveAllPhotoOrder(SelectedFolder);
+    }
+
     public void MovePhotosToFolder(List<PhotoItemViewModel> photos, PhotoFolderViewModel targetFolder)
     {
         var sourceFolder = SelectedFolder;
@@ -700,9 +710,9 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         if (toMove.Count == 0) return;
 
         var sourceSnap = sourceFolder.AllPhotoItems
-            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray();
+            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored, p.IsFavorite)).ToArray();
         var destSnap = targetFolder.AllPhotoItems
-            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored)).ToArray();
+            .Select(p => (p, p.IsRemoved, p.Caption, p.IsMirrored, p.IsFavorite)).ToArray();
 
         var moved = new List<(PhotoItemViewModel Vm, string OrigPath, string OrigName, string NewPath, string NewName)>();
         foreach (var vm in toMove)

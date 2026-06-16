@@ -263,6 +263,29 @@
                                             </Style>
                                         </MenuItem.Style>
                                     </MenuItem>
+                                    <MenuItem Header="Add to Favorites" Tag="Favorite" Click="PhotoFavorite_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="Remove from Favorites" Tag="RemoveFavorite" Click="PhotoFavorite_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
                                     <MenuItem Header="Remove from Presentation" Tag="Remove" Click="PhotoRemove_Click">
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem">
@@ -429,6 +452,23 @@
                                             </Rectangle.Fill>
                                         </Rectangle>
                                     </Grid>
+                                    <TextBlock Text="★"
+                                               IsHitTestVisible="False"
+                                               HorizontalAlignment="Right" VerticalAlignment="Top"
+                                               Margin="0,2,3,0"
+                                               FontSize="{DynamicResource FontSize.VideoIcon}"
+                                               Foreground="Gold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Grid>
                             </Border>
                             <TextBlock Text="{Binding FileName}"
