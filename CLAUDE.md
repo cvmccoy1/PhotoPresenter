@@ -19,6 +19,11 @@ The project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`. Only NuGet 
 
 The UTC build date (formatted `MM-dd-yyyy`) is embedded as an `AssemblyMetadataAttribute` with key `"BuildDate"` via a top-level `PropertyGroup` + `ItemGroup` in `.csproj`. These must be at the **top level** (not inside a `<Target>`): `GenerateAssemblyInfo` collects `AssemblyAttribute` items during MSBuild's evaluation phase; items added dynamically inside a target run too late and are ignored. `AboutWindow.xaml.cs` reads the attribute at runtime via `Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()` and displays `"Version X.Y.Z  (built MM-dd-yyyy)"`. No extra packages or generated files are involved.
 
+## Development workflow
+
+- Any new feature or behavior change must come with corresponding test coverage in `PhotoPresenter.Tests/` (see `## Tests` below for structure and conventions).
+- Before considering a change complete, run the full suite — `dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj` — and confirm all tests pass.
+
 ## Architecture
 
 WPF MVVM app with two modes — **Organise** and **Present** — wired via a DataTemplate dispatch pattern in `App.xaml`. There is no navigation framework; `MainWindow` hosts a single `ContentControl` whose content switches between `OrganiseViewModel` and `PresentViewModel` instances, and WPF automatically applies the matching `DataTemplate` (defined without `x:Key` in `App.xaml.Resources`).
