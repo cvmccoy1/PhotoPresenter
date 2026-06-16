@@ -11,6 +11,7 @@ namespace PhotoPresenter.ViewModels;
 public partial class PresentViewModel : ObservableObject
 {
     private List<PhotoFolderViewModel> _allFolders = new();
+    private List<IReadOnlyList<PhotoItemViewModel>> _effectivePhotoLists = new();
     private int _currentFolderIndex;
     private int _currentPhotoIndex;
     private int _loadSequence;
@@ -66,9 +67,12 @@ public partial class PresentViewModel : ObservableObject
 
     public void RotateVideo() => VideoRotation = (VideoRotation + 90) % 360;
 
-    public void SetFolders(List<PhotoFolderViewModel> folders, int startFolderIndex = 0, int startPhotoIndex = 0)
+    public void SetFolders(List<PhotoFolderViewModel> folders, int startFolderIndex = 0, int startPhotoIndex = 0,
+        List<IReadOnlyList<PhotoItemViewModel>>? effectivePhotos = null)
     {
         _allFolders = folders;
+        _effectivePhotoLists = effectivePhotos
+            ?? folders.Select(f => (IReadOnlyList<PhotoItemViewModel>)f.Photos).ToList();
 
         // Precompute cumulative photo counts so UpdateLabels is O(1).
         _cumulativeCounts = new int[folders.Count];
@@ -76,7 +80,7 @@ public partial class PresentViewModel : ObservableObject
         for (int i = 0; i < folders.Count; i++)
         {
             _cumulativeCounts[i] = cumulative;
-            cumulative += folders[i].Photos.Count;
+            cumulative += _effectivePhotoLists[i].Count;
         }
         _totalPhotoCount = cumulative;
 
@@ -158,8 +162,8 @@ public partial class PresentViewModel : ObservableObject
     public PhotoItemViewModel? CurrentPhotoItem =>
         CurrentPhotos.Count > 0 ? CurrentPhotos[_currentPhotoIndex] : null;
 
-    private ObservableCollection<PhotoItemViewModel> CurrentPhotos =>
-        _allFolders.Count > 0 ? _allFolders[_currentFolderIndex].Photos : new();
+    private IReadOnlyList<PhotoItemViewModel> CurrentPhotos =>
+        _effectivePhotoLists.Count > 0 ? _effectivePhotoLists[_currentFolderIndex] : Array.Empty<PhotoItemViewModel>();
 
     private void ResetZoomPan()
     {
@@ -265,7 +269,7 @@ public partial class PresentViewModel : ObservableObject
         var nextFolder = _currentFolderIndex;
         var nextPhoto = _currentPhotoIndex + 1;
 
-        if (nextPhoto >= _allFolders[nextFolder].Photos.Count)
+        if (nextPhoto >= _effectivePhotoLists[nextFolder].Count)
         {
             nextFolder = (nextFolder + 1) % _allFolders.Count;
             nextPhoto = 0;
@@ -274,7 +278,7 @@ public partial class PresentViewModel : ObservableObject
         // Only one item total — nothing to preload
         if (nextFolder == _currentFolderIndex && nextPhoto == _currentPhotoIndex) return;
 
-        var nextItem = _allFolders[nextFolder].Photos[nextPhoto];
+        var nextItem = _effectivePhotoLists[nextFolder][nextPhoto];
         if (nextItem.IsVideo) return; // no preload for video
 
         var path = nextItem.FullPath;

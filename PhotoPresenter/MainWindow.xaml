@@ -14,7 +14,7 @@
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" x:Name="MainToolbar" Orientation="Vertical">
             <!-- Row 1: actions + Present right-justified -->
-            <Grid>
+            <Grid Background="{DynamicResource AppBackground}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -31,14 +31,22 @@
                                     Click="Settings_Click"
                                     Padding="6,3" Margin="2"/>
                             <Separator/>
+                            <Button Content="Export Favorites…"
+                                    Click="ExportFavorites_Click"
+                                    Padding="6,3" Margin="2"/>
+                            <Separator/>
                             <Button Content="About"
                                     Click="About_Click"
                                     Padding="6,3" Margin="2"/>
                         </ToolBar>
                     </ToolBarTray>
                 </StackPanel>
-                <ToolBarTray Grid.Column="1" IsLocked="True">
+                <ToolBarTray Grid.Column="1" IsLocked="True" Background="{DynamicResource AppBackground}">
                     <ToolBar>
+                        <CheckBox Content="Favorites Only"
+                                  IsChecked="{Binding FavoritesOnly}"
+                                  VerticalAlignment="Center"
+                                  Margin="4,0,8,0"/>
                         <Button Content="▶  Present"
                                 Command="{Binding SwitchToPresentCommand}"
                                 Padding="8,3" Margin="2"

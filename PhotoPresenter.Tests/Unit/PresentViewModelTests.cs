@@ -618,6 +618,94 @@ public class PresentViewModelTests
         Assert.NotEmpty(vm.OverallLabel);
     }
 
+    // ---------------------------------------------------------------------------
+    // Favorites-only effective-photo-list (SetFolders with effectivePhotos)
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void SetFolders_WithEffectivePhotos_OverallLabelCountsOnlyEffectiveTotal()
+    {
+        var vm = new PresentViewModel();
+        var f1 = FolderWithPhotos(0, 3); // 3 total, 1 in effective list
+        var f2 = FolderWithPhotos(1, 2); // 2 total, 2 in effective list
+
+        var effectivePhotos = new List<IReadOnlyList<PhotoItemViewModel>>
+        {
+            new List<PhotoItemViewModel> { f1.Photos[0] },
+            new List<PhotoItemViewModel> { f2.Photos[0], f2.Photos[1] }
+        };
+
+        vm.SetFolders(new List<PhotoFolderViewModel> { f1, f2 }, 0, 0, effectivePhotos);
+
+        Assert.Equal("1 of 3", vm.OverallLabel); // effective total = 1+2, not 3+2
+    }
+
+    [Fact]
+    public void SetFolders_WithEffectivePhotos_PhotoLabelReflectsEffectiveCount()
+    {
+        var vm = new PresentViewModel();
+        var folder = FolderWithPhotos(0, 3);
+
+        var effectivePhotos = new List<IReadOnlyList<PhotoItemViewModel>>
+        {
+            new List<PhotoItemViewModel> { folder.Photos[0], folder.Photos[2] }
+        };
+
+        vm.SetFolders(new List<PhotoFolderViewModel> { folder }, 0, 0, effectivePhotos);
+
+        Assert.Equal("Item 1 of 2", vm.PhotoLabel); // 2, not 3
+    }
+
+    [Fact]
+    public void SetFolders_WithEffectivePhotos_NavigationWrapsWithinEffectiveList()
+    {
+        // Labels update asynchronously (after image load); check CurrentPhotoItem instead.
+        var vm = new PresentViewModel();
+        var folder = FolderWithPhotos(0, 3);
+
+        var effectivePhotos = new List<IReadOnlyList<PhotoItemViewModel>>
+        {
+            new List<PhotoItemViewModel> { folder.Photos[0], folder.Photos[2] }
+        };
+
+        vm.SetFolders(new List<PhotoFolderViewModel> { folder }, 0, 0, effectivePhotos);
+        Assert.Same(folder.Photos[0], vm.CurrentPhotoItem);
+
+        vm.NextPhoto();
+        Assert.Same(folder.Photos[2], vm.CurrentPhotoItem); // skipped Photos[1]
+
+        vm.NextPhoto(); // wraps back to effective[0]
+        Assert.Same(folder.Photos[0], vm.CurrentPhotoItem);
+    }
+
+    [Fact]
+    public void SetFolders_WithEffectivePhotos_OverallLabelReflectsStartPosition()
+    {
+        // Verify cumulative-count arithmetic across two folders with filtered lists.
+        // Labels from SetFolders are set synchronously; use start positions instead of NextPhoto.
+        var vm1 = new PresentViewModel();
+        var vm2 = new PresentViewModel();
+        var vm3 = new PresentViewModel();
+        var f1 = FolderWithPhotos(0, 3);
+        var f2 = FolderWithPhotos(1, 3);
+
+        var effectivePhotos = new List<IReadOnlyList<PhotoItemViewModel>>
+        {
+            new List<PhotoItemViewModel> { f1.Photos[0] },               // 1 from f1
+            new List<PhotoItemViewModel> { f2.Photos[0], f2.Photos[2] }  // 2 from f2
+        };
+        var folders = new List<PhotoFolderViewModel> { f1, f2 };
+
+        vm1.SetFolders(folders, 0, 0, effectivePhotos);
+        Assert.Equal("1 of 3", vm1.OverallLabel);
+
+        vm2.SetFolders(folders, 1, 0, effectivePhotos);
+        Assert.Equal("2 of 3", vm2.OverallLabel);
+
+        vm3.SetFolders(folders, 1, 1, effectivePhotos);
+        Assert.Equal("3 of 3", vm3.OverallLabel);
+    }
+
     [Fact]
     public async Task NextPhoto_WhenPreloadAlreadyComplete_UsesPreloadedImageFastPath()
     {

@@ -16,6 +16,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _parentFolderPath = "";
 
+    [ObservableProperty]
+    private bool _favoritesOnly;
+
     public OrganiseViewModel OrganiseVM { get; }
     public PresentViewModel PresentVM { get; }
 
@@ -57,20 +60,51 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SwitchToPresent()
     {
-        if (OrganiseVM.Folders.Count == 0) return;
+        var allFolders = OrganiseVM.Folders.ToList();
+        if (allFolders.Count == 0) return;
 
-        var folders = OrganiseVM.Folders.ToList();
-        int startFolder = 0;
-        int startPhoto = 0;
-
-        if (OrganiseVM.SelectedFolder != null)
+        if (FavoritesOnly)
         {
-            startFolder = Math.Max(0, folders.IndexOf(OrganiseVM.SelectedFolder));
-            if (OrganiseVM.SelectedPhoto != null)
-                startPhoto = Math.Max(0, OrganiseVM.SelectedFolder.Photos.IndexOf(OrganiseVM.SelectedPhoto));
+            var compacted = allFolders
+                .Select(f => (folder: f, photos: f.Photos.Where(p => p.IsFavorite).ToList()))
+                .Where(x => x.photos.Count > 0)
+                .ToList();
+
+            if (compacted.Count == 0)
+            {
+                OrganiseVM.ShowStatus("No favorites to present.");
+                return;
+            }
+
+            int startFolder = 0, startPhoto = 0;
+            if (OrganiseVM.SelectedFolder != null)
+            {
+                int fi = compacted.FindIndex(x => x.folder == OrganiseVM.SelectedFolder);
+                if (fi >= 0)
+                {
+                    startFolder = fi;
+                    if (OrganiseVM.SelectedPhoto?.IsFavorite == true)
+                        startPhoto = Math.Max(0, compacted[fi].photos.IndexOf(OrganiseVM.SelectedPhoto));
+                }
+            }
+
+            PresentVM.SetFolders(
+                compacted.Select(x => x.folder).ToList(),
+                startFolder, startPhoto,
+                compacted.Select(x => (IReadOnlyList<PhotoItemViewModel>)x.photos).ToList());
+        }
+        else
+        {
+            int startFolder = 0, startPhoto = 0;
+            if (OrganiseVM.SelectedFolder != null)
+            {
+                startFolder = Math.Max(0, allFolders.IndexOf(OrganiseVM.SelectedFolder));
+                if (OrganiseVM.SelectedPhoto != null)
+                    startPhoto = Math.Max(0, OrganiseVM.SelectedFolder.Photos.IndexOf(OrganiseVM.SelectedPhoto));
+            }
+            PresentVM.SetFolders(allFolders, startFolder, startPhoto);
         }
 
-        PresentVM.SetFolders(folders, startFolder, startPhoto);
         CurrentMode = AppMode.Present;
     }
 

@@ -838,6 +838,68 @@ public class OrganiseViewModelTests
         return folder;
     }
 
+    // ── GetAllFavorites ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAllFavorites_ReturnsNonRemovedFavoritesFromNonRemovedFolders()
+    {
+        var vm = await BuildVm(
+            MakeFolder("A", "a1.jpg", "a2.jpg"),
+            MakeFolder("B", "b1.jpg"));
+
+        vm.Folders[0].Photos[0].IsFavorite = true;  // a1.jpg — should appear
+        vm.Folders[0].Photos[1].IsFavorite = false; // a2.jpg — not a favorite
+        vm.Folders[1].Photos[0].IsFavorite = true;  // b1.jpg — should appear
+
+        var favs = vm.GetAllFavorites();
+
+        Assert.Equal(2, favs.Count);
+        Assert.Contains(favs, p => p.FileName == "a1.jpg");
+        Assert.Contains(favs, p => p.FileName == "b1.jpg");
+    }
+
+    [Fact]
+    public async Task GetAllFavorites_ExcludesRemovedPhotos()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a1.jpg", "a2.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        vm.Folders[0].Photos[0].IsFavorite = true;
+        vm.Folders[0].Photos[1].IsFavorite = true;
+        vm.RemovePhoto(vm.Folders[0].Photos[1]); // a2.jpg removed
+
+        var favs = vm.GetAllFavorites();
+
+        Assert.Single(favs);
+        Assert.Equal("a1.jpg", favs[0].FileName);
+    }
+
+    [Fact]
+    public async Task GetAllFavorites_ExcludesRemovedFolders()
+    {
+        var vm = await BuildVm(
+            MakeFolder("A", "a1.jpg"),
+            MakeFolder("B", "b1.jpg"));
+
+        vm.Folders[0].Photos[0].IsFavorite = true;
+        vm.Folders[1].Photos[0].IsFavorite = true;
+        vm.RemoveFolders(new[] { vm.Folders[1] }); // folder B removed
+
+        var favs = vm.GetAllFavorites();
+
+        Assert.Single(favs);
+        Assert.Equal("a1.jpg", favs[0].FileName);
+    }
+
+    [Fact]
+    public async Task GetAllFavorites_ReturnsEmpty_WhenNoFavorites()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a1.jpg", "a2.jpg"));
+
+        var favs = vm.GetAllFavorites();
+
+        Assert.Empty(favs);
+    }
+
     // ── Dispose ──────────────────────────────────────────────────────────────────
 
     [Fact]

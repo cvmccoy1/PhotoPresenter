@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using Microsoft.Win32;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -102,6 +103,14 @@ public partial class MainWindow : Window
 
     private void About_Click(object sender, RoutedEventArgs e) =>
         new AboutWindow { Owner = this }.ShowDialog();
+
+    private void ExportFavorites_Click(object sender, RoutedEventArgs e)
+    {
+        var favorites = _vm.OrganiseVM.GetAllFavorites();
+        var dialog = new OpenFolderDialog { Title = "Select destination folder for exported favorites" };
+        if (dialog.ShowDialog() != true) return;
+        new ExportProgressDialog(favorites, dialog.FolderName) { Owner = this }.ShowDialog();
+    }
 
     private void Settings_Click(object sender, RoutedEventArgs e) =>
         new SettingsWindow(_vm) { Owner = this }.ShowDialog();

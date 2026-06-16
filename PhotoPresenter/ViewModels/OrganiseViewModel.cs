@@ -268,7 +268,13 @@ public partial class OrganiseViewModel : ObservableObject, IDisposable
         _statusTimer?.Stop();
     }
 
-    private void ShowStatus(string message)
+    public IReadOnlyList<PhotoItemViewModel> GetAllFavorites()
+        => _allFolderItems
+            .Where(f => !f.IsRemoved)
+            .SelectMany(f => f.AllPhotoItems.Where(p => p.IsFavorite && !p.IsRemoved))
+            .ToList();
+
+    internal void ShowStatus(string message)
     {
         StatusMessage = message;
         _statusTimer?.Stop();
