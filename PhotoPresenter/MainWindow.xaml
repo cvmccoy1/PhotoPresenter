@@ -20,8 +20,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ToolBarTray IsLocked="True">
-                        <ToolBar>
+                    <ToolBarTray IsLocked="True" Background="{DynamicResource AppBackground}">
+                        <ToolBar Background="{DynamicResource AppBackground}"
+                                 Foreground="{DynamicResource PanelText}">
                             <Button Content="↩ Undo"
                                     Click="Undo_Click"
                                     IsEnabled="{Binding OrganiseVM.CanUndo}"
@@ -41,22 +42,23 @@
                         </ToolBar>
                     </ToolBarTray>
                 </StackPanel>
-                <ToolBarTray Grid.Column="1" IsLocked="True" Background="{DynamicResource AppBackground}">
-                    <ToolBar>
-                        <CheckBox Content="Favorites Only"
-                                  IsChecked="{Binding FavoritesOnly}"
-                                  VerticalAlignment="Center"
-                                  Margin="4,0,8,0"/>
-                        <Button Content="▶  Present"
-                                Command="{Binding SwitchToPresentCommand}"
-                                Padding="8,3" Margin="2"
-                                FontWeight="SemiBold"/>
-                    </ToolBar>
-                </ToolBarTray>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                    <CheckBox Content="Favorites Only"
+                              IsChecked="{Binding FavoritesOnly}"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PanelText}"
+                              Margin="0,0,8,0"/>
+                    <Button Content="▶  Present"
+                            Command="{Binding SwitchToPresentCommand}"
+                            Padding="8,3" Margin="2"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource PanelText}"/>
+                </StackPanel>
             </Grid>
             <!-- Row 2: browse + current folder path -->
-            <ToolBarTray IsLocked="True">
-                <ToolBar>
+            <ToolBarTray IsLocked="True" Background="{DynamicResource AppBackground}">
+                <ToolBar Background="{DynamicResource AppBackground}"
+                         Foreground="{DynamicResource PanelText}">
                     <Button Content="Browse Folder…"
                             Command="{Binding BrowseFolderCommand}"
                             Padding="6,3" Margin="2"/>
@@ -65,7 +67,7 @@
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
                                Margin="4,0"
-                               Foreground="#555"
+                               Foreground="{DynamicResource PanelText}"
                                FontSize="12"/>
                 </ToolBar>
             </ToolBarTray>
