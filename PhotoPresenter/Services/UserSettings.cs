@@ -13,6 +13,7 @@ public class UserSettings
     public bool ShowAllPhotos { get; set; } = false;
     public double Volume { get; set; } = 0.5;
     public bool FadeTransitionEnabled { get; set; } = true;
+    public int AutoplayIntervalSeconds { get; set; } = 5;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
     public double? WindowWidth { get; set; }

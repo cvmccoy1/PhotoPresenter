@@ -221,6 +221,25 @@ public class SidecarParsingTests : IDisposable
     }
 
     [Fact]
+    public void LoadPhotosForFolder_AdjustmentsApplied()
+    {
+        var dir = _tmp.CreateSubDir("FolderAdj");
+        _tmp.CreateFile(@"FolderAdj\a.jpg");
+        _tmp.CreateFile(@"FolderAdj\b.jpg");
+        WritePhotoSidecar(dir, order: ["a.jpg", "b.jpg"],
+            adjustments: new Dictionary<string, PhotoAdjustment> { ["a.jpg"] = new(25, -10) });
+
+        var photos = PhotoLibraryService.LoadPhotosForFolder(dir);
+
+        var a = photos.First(p => p.FileName == "a.jpg");
+        var b = photos.First(p => p.FileName == "b.jpg");
+        Assert.Equal(25, a.Brightness);
+        Assert.Equal(-10, a.Contrast);
+        Assert.Equal(0, b.Brightness);
+        Assert.Equal(0, b.Contrast);
+    }
+
+    [Fact]
     public void LoadPhotosForFolder_NonMediaFilesIgnored()
     {
         var dir = _tmp.CreateSubDir("FolderH");
@@ -278,15 +297,17 @@ public class SidecarParsingTests : IDisposable
         IEnumerable<string>? removed = null,
         Dictionary<string, string>? captions = null,
         IEnumerable<string>? mirrored = null,
-        IEnumerable<string>? favorites = null)
+        IEnumerable<string>? favorites = null,
+        Dictionary<string, PhotoAdjustment>? adjustments = null)
     {
         var sidecar = new
         {
-            order     = order?.ToList() ?? new List<string>(),
-            removed   = removed?.ToList() ?? new List<string>(),
+            order       = order?.ToList() ?? new List<string>(),
+            removed     = removed?.ToList() ?? new List<string>(),
             captions,
-            mirrored  = mirrored?.ToList(),
-            favorites = favorites?.ToList()
+            mirrored    = mirrored?.ToList(),
+            favorites   = favorites?.ToList(),
+            adjustments
         };
         File.WriteAllText(
             System.IO.Path.Combine(folderPath, "_photoorder.json"),

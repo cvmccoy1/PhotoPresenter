@@ -10,4 +10,6 @@ public class PhotoItem
     public bool IsMirrored { get; set; }
     public bool IsFavorite { get; set; }
     public string Caption { get; set; } = "";
+    public int Brightness { get; set; }
+    public int Contrast { get; set; }
 }

@@ -128,6 +128,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             var captions     = sidecar.Captions;
             var mirroredSet  = new HashSet<string>(sidecar.Mirrored ?? new(), StringComparer.OrdinalIgnoreCase);
             var favoritesSet = new HashSet<string>(sidecar.Favorites ?? new(), StringComparer.OrdinalIgnoreCase);
+            var adjustments  = sidecar.Adjustments;
             var removedSet   = new HashSet<string>(removedNames, StringComparer.OrdinalIgnoreCase);
             var allFiles     = files.ToDictionary(f => f.Name, f => f, StringComparer.OrdinalIgnoreCase);
             var mutable      = new Dictionary<string, FileInfo>(allFiles, StringComparer.OrdinalIgnoreCase);
@@ -136,7 +137,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             // Active in sidecar order
             foreach (var name in sidecar.Order)
                 if (mutable.Remove(name, out var file))
-                    result.Add(ToPhotoItem(file, captions: captions, mirrored: mirroredSet, favorites: favoritesSet));
+                    result.Add(ToPhotoItem(file, captions: captions, mirrored: mirroredSet, favorites: favoritesSet, adjustments: adjustments));
 
             // New files (not in sidecar, not removed) appended by effective date
             var newItems = mutable.Values
@@ -150,7 +151,7 @@ public class PhotoLibraryService : IPhotoLibraryService
             // Removed files that still exist on disk
             foreach (var name in removedNames)
                 if (allFiles.TryGetValue(name, out var file))
-                    result.Add(ToPhotoItem(file, isRemoved: true, captions: captions, mirrored: mirroredSet, favorites: favoritesSet));
+                    result.Add(ToPhotoItem(file, isRemoved: true, captions: captions, mirrored: mirroredSet, favorites: favoritesSet, adjustments: adjustments));
 
             return result;
         }
@@ -163,7 +164,7 @@ public class PhotoLibraryService : IPhotoLibraryService
 
     private static PhotoItem ToPhotoItem(FileInfo file, bool isRemoved = false,
         Dictionary<string, string>? captions = null, HashSet<string>? mirrored = null,
-        HashSet<string>? favorites = null)
+        HashSet<string>? favorites = null, Dictionary<string, PhotoAdjustment>? adjustments = null)
     {
         var item = new PhotoItem
         {
@@ -177,6 +178,11 @@ public class PhotoLibraryService : IPhotoLibraryService
         };
         if (captions != null && captions.TryGetValue(file.Name, out var cap))
             item.Caption = cap;
+        if (adjustments != null && adjustments.TryGetValue(file.Name, out var adj))
+        {
+            item.Brightness = adj.Brightness;
+            item.Contrast   = adj.Contrast;
+        }
         return item;
     }
 
@@ -251,13 +257,17 @@ public class PhotoLibraryService : IPhotoLibraryService
             .Where(p => p.IsFavorite)
             .Select(p => p.FileName)
             .ToList();
+        var adjustments = all
+            .Where(p => p.Brightness != 0 || p.Contrast != 0)
+            .ToDictionary(p => p.FileName, p => new PhotoAdjustment(p.Brightness, p.Contrast));
         var sidecar = new PhotoOrderSidecar
         {
-            Order     = all.Where(p => !p.IsRemoved).Select(p => p.FileName).ToList(),
-            Removed   = all.Where(p =>  p.IsRemoved).Select(p => p.FileName).ToList(),
-            Captions  = caps.Count > 0 ? caps : null,
-            Mirrored  = mirrored.Count > 0 ? mirrored : null,
-            Favorites = favorites.Count > 0 ? favorites : null
+            Order       = all.Where(p => !p.IsRemoved).Select(p => p.FileName).ToList(),
+            Removed     = all.Where(p =>  p.IsRemoved).Select(p => p.FileName).ToList(),
+            Captions    = caps.Count > 0 ? caps : null,
+            Mirrored    = mirrored.Count > 0 ? mirrored : null,
+            Favorites   = favorites.Count > 0 ? favorites : null,
+            Adjustments = adjustments.Count > 0 ? adjustments : null
         };
         File.WriteAllText(Path.Combine(folder.FullPath, PhotoOrderFile), JsonSerializer.Serialize(sidecar, JsonOptions));
     }

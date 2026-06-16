@@ -22,6 +22,7 @@ public class UserSettingsTests : IDisposable
         Assert.False(settings.ShowAllFolders);
         Assert.False(settings.ShowAllPhotos);
         Assert.True(settings.FadeTransitionEnabled);
+        Assert.Equal(5, settings.AutoplayIntervalSeconds);
     }
 
     [Fact]
@@ -100,7 +101,8 @@ public class UserSettingsTests : IDisposable
             SplitterPosition = 300,
             Theme = "SlateBlue",
             TextSize = "Small",
-            FadeTransitionEnabled = false
+            FadeTransitionEnabled = false,
+            AutoplayIntervalSeconds = 10
         };
 
         original.Save(SettingsFile);
@@ -123,6 +125,7 @@ public class UserSettingsTests : IDisposable
         Assert.Equal(original.Theme,               loaded.Theme);
         Assert.Equal(original.TextSize,            loaded.TextSize);
         Assert.Equal(original.FadeTransitionEnabled, loaded.FadeTransitionEnabled);
+        Assert.Equal(original.AutoplayIntervalSeconds, loaded.AutoplayIntervalSeconds);
     }
 
     [Fact]

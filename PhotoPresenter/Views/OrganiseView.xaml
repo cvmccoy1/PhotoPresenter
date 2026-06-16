@@ -353,6 +353,8 @@
                                         </MenuItem.Style>
                                     </MenuItem>
                                     <Separator/>
+                                    <MenuItem Header="Adjust Brightness/Contrast…" Tag="AdjustImage" Click="PhotoAdjust_Click"/>
+                                    <Separator/>
                                     <MenuItem Header="Open Folder in Explorer" Tag="PhotoOpenExplorer" Click="PhotoOpenExplorer_Click"/>
                                 </ContextMenu>
                             </StackPanel.ContextMenu>

@@ -37,6 +37,7 @@ public partial class MainViewModel : ObservableObject
         OrganiseVM.ShowAllPhotos  = settings.ShowAllPhotos;
         PresentVM.Volume          = settings.Volume;
         PresentVM.IsFadeEnabled   = settings.FadeTransitionEnabled;
+        PresentVM.AutoplayIntervalSeconds = settings.AutoplayIntervalSeconds;
     }
 
     [RelayCommand]

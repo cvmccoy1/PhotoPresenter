@@ -480,6 +480,28 @@ public class PresentViewModelTests
         Assert.False(vm.IsFadeEnabled);
     }
 
+    [Fact]
+    public void AutoplayIntervalSeconds_DefaultsToFive()
+    {
+        var vm = new PresentViewModel();
+
+        Assert.Equal(5, vm.AutoplayIntervalSeconds);
+    }
+
+    [Fact]
+    public void SetFolders_DoesNotResetAutoplayIntervalSeconds()
+    {
+        // Persistent display preference, like IsFadeEnabled, not per-session state.
+        var vm = new PresentViewModel();
+        var folders = MakeFolders(2);
+        vm.SetFolders(folders);
+        vm.AutoplayIntervalSeconds = 15;
+
+        vm.SetFolders(folders);
+
+        Assert.Equal(15, vm.AutoplayIntervalSeconds);
+    }
+
     // ---------------------------------------------------------------------------
     // Computed properties
     // ---------------------------------------------------------------------------

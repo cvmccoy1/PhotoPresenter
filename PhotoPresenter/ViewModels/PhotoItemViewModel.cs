@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,6 +32,8 @@ public partial class PhotoItemViewModel : ObservableObject
     [ObservableProperty] private bool   _isMirrored;
     [ObservableProperty] private bool   _isFavorite;
     [ObservableProperty] private string _toolTipText = "";
+    [ObservableProperty] private int    _brightness;
+    [ObservableProperty] private int    _contrast;
 
     public bool HasCaption    => !string.IsNullOrEmpty(Caption);
     public bool HasThumbnail  => Thumbnail != null;
@@ -47,6 +50,20 @@ public partial class PhotoItemViewModel : ObservableObject
         Model.IsFavorite = value;
         _toolTipLoaded = false;
     }
+    partial void OnBrightnessChanged(int value)
+    {
+        Model.Brightness = value;
+        _toolTipLoaded = false;
+        ReloadThumbnail();
+    }
+    partial void OnContrastChanged(int value)
+    {
+        Model.Contrast = value;
+        _toolTipLoaded = false;
+        ReloadThumbnail();
+    }
+
+    internal void ReloadThumbnail() => _ = LoadThumbnailAsync();
 
     private bool _toolTipLoaded;
     private bool _thumbnailRequested;
@@ -66,6 +83,8 @@ public partial class PhotoItemViewModel : ObservableObject
         _caption    = model.Caption;
         _isMirrored = model.IsMirrored;
         _isFavorite = model.IsFavorite;
+        _brightness = model.Brightness;
+        _contrast   = model.Contrast;
         // Thumbnails are loaded on demand via EnsureThumbnailLoaded().
     }
 
@@ -161,6 +180,7 @@ public partial class PhotoItemViewModel : ObservableObject
         string text = $"Type: {ext}\nDate: {date}\n{detail}\nSize: {size}";
         if (IsMirrored) text += "\nMirrored: Yes";
         if (IsFavorite) text += "\nFavorite: Yes";
+        if (Brightness != 0 || Contrast != 0) text += "\nAdjusted: Yes";
         return text;
     }
 
@@ -175,23 +195,29 @@ public partial class PhotoItemViewModel : ObservableObject
     private async Task LoadThumbnailAsync()
     {
         if (!File.Exists(Model.FullPath)) return;
+        bool hasAdjustment = Brightness != 0 || Contrast != 0;
         try
         {
             // Check cache before acquiring the semaphore — hits are pure disk reads.
-            var cached = await Task.Run(() => ThumbnailCache.TryGet(Model.FullPath));
-            if (cached != null) { Thumbnail = cached; return; }
+            // Adjusted thumbnails bypass the cache: it's keyed only by path+mtime, not by adjustment values.
+            if (!hasAdjustment)
+            {
+                var cached = await Task.Run(() => ThumbnailCache.TryGet(Model.FullPath));
+                if (cached != null) { Thumbnail = cached; return; }
+            }
 
             await ThumbSemaphore.WaitAsync();
             try
             {
                 BitmapSource? bmp = Model.IsVideo
                     ? await GetVideoThumbnailAsync(Model.FullPath)
-                    : await Task.Run(() => LoadBitmap(Model.FullPath, 150));
+                    : await Task.Run(() => LoadBitmap(Model.FullPath, 150, Brightness, Contrast));
 
                 if (bmp != null)
                 {
                     Thumbnail = bmp;
-                    _ = Task.Run(() => ThumbnailCache.Save(Model.FullPath, bmp));
+                    if (!hasAdjustment)
+                        _ = Task.Run(() => ThumbnailCache.Save(Model.FullPath, bmp));
                 }
             }
             finally { ThumbSemaphore.Release(); }
@@ -226,29 +252,67 @@ public partial class PhotoItemViewModel : ObservableObject
         catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
     }
 
-    internal static BitmapSource LoadBitmap(string path, int decodeWidth)
+    internal static BitmapSource LoadBitmap(string path, int decodeWidth, int brightness = 0, int contrast = 0)
     {
         var ext = Path.GetExtension(path);
+        BitmapSource result;
         if (ext.Equals(".heic", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".heif", StringComparison.OrdinalIgnoreCase))
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return LoadViaDecoder(stream, decodeWidth);
+            result = LoadViaDecoder(stream, decodeWidth);
+        }
+        else
+        {
+            int orientation = ReadExifOrientation(path);
+
+            using var imgStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.StreamSource  = imgStream;
+            bmp.CacheOption   = BitmapCacheOption.OnLoad;
+            bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
+            bmp.EndInit();
+            bmp.Freeze();
+
+            result = ApplyExifOrientation(bmp, orientation);
         }
 
-        int orientation = ReadExifOrientation(path);
+        return ApplyAdjustments(result, brightness, contrast);
+    }
 
-        using var imgStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var bmp = new BitmapImage();
-        bmp.BeginInit();
-        bmp.StreamSource  = imgStream;
-        bmp.CacheOption   = BitmapCacheOption.OnLoad;
-        bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-        if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
-        bmp.EndInit();
-        bmp.Freeze();
+    internal static BitmapSource ApplyAdjustments(BitmapSource source, int brightness, int contrast)
+    {
+        if (brightness == 0 && contrast == 0) return source;
 
-        return ApplyExifOrientation(bmp, orientation);
+        var converted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        converted.Freeze();
+
+        int width  = converted.PixelWidth;
+        int height = converted.PixelHeight;
+        int stride = width * 4;
+        var pixels = new byte[height * stride];
+        converted.CopyPixels(pixels, stride, 0);
+
+        double contrastFactor = 1 + contrast / 100.0;
+        double brightnessAdd  = brightness / 100.0 * 255;
+
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            // BGRA order — adjust B, G, R; skip alpha (i+3).
+            for (int c = 0; c < 3; c++)
+            {
+                double v = pixels[i + c];
+                v = (v - 128) * contrastFactor + 128 + brightnessAdd;
+                pixels[i + c] = (byte)Math.Clamp(v, 0, 255);
+            }
+        }
+
+        var result = new WriteableBitmap(width, height, converted.DpiX, converted.DpiY, PixelFormats.Bgra32, null);
+        result.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+        result.Freeze();
+        return result;
     }
 
     private static int ReadExifOrientation(string path)

@@ -11,10 +11,8 @@ namespace PhotoPresenter.Views;
 
 public partial class PresentView : UserControl
 {
-    private static readonly TimeSpan AutoplayInterval = TimeSpan.FromSeconds(5);
-
     private readonly DispatcherTimer _positionTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
-    private readonly DispatcherTimer _autoplayTimer = new() { Interval = AutoplayInterval };
+    private readonly DispatcherTimer _autoplayTimer = new();
     private double _videoDurationSeconds;
     private bool _isDragging;
     private bool _mediaFailed;
@@ -91,6 +89,7 @@ public partial class PresentView : UserControl
                 break;
 
             case nameof(PresentViewModel.IsAutoplayEnabled):
+            case nameof(PresentViewModel.AutoplayIntervalSeconds):
                 UpdateAutoplayTimerState();
                 break;
 
@@ -107,9 +106,14 @@ public partial class PresentView : UserControl
     private void UpdateAutoplayTimerState()
     {
         if (Vm?.IsAutoplayEnabled == true && Vm.CurrentIsVideo == false)
+        {
+            _autoplayTimer.Interval = TimeSpan.FromSeconds(Vm.AutoplayIntervalSeconds);
             _autoplayTimer.Start();
+        }
         else
+        {
             _autoplayTimer.Stop();
+        }
     }
 
     private void AutoplayTimer_Tick(object? sender, EventArgs e) => Vm?.NextPhoto();

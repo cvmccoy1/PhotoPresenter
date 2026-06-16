@@ -179,6 +179,38 @@ public class PhotoItemViewModelTests
         Assert.True(vm.Model.IsFavorite);
     }
 
+    [Fact]
+    public void Brightness_SyncedToModel()
+    {
+        var vm = MakeVm();
+        vm.Brightness = 25;
+        Assert.Equal(25, vm.Model.Brightness);
+    }
+
+    [Fact]
+    public void Contrast_SyncedToModel()
+    {
+        var vm = MakeVm();
+        vm.Contrast = -25;
+        Assert.Equal(-25, vm.Model.Contrast);
+    }
+
+    [Fact]
+    public void Brightness_NonExistentFile_ReloadDoesNotThrow()
+    {
+        // OnBrightnessChanged calls ReloadThumbnail(), which fires LoadThumbnailAsync()
+        // fire-and-forget; for a non-existent path it must return early without throwing.
+        var vm = MakeVm();
+        Assert.Null(Record.Exception(() => vm.Brightness = 10));
+    }
+
+    [Fact]
+    public void Contrast_NonExistentFile_ReloadDoesNotThrow()
+    {
+        var vm = MakeVm();
+        Assert.Null(Record.Exception(() => vm.Contrast = 10));
+    }
+
     // ── EnsureToolTipLoaded ───────────────────────────────────────────────────────
 
     [Fact]
@@ -322,6 +354,42 @@ public class PhotoItemViewModelTests
         Assert.Contains("Favorite: Yes", vm.ToolTipText);
     }
 
+    [Fact]
+    public void EnsureToolTipLoaded_WhenAdjusted_ContainsAdjustedLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg", Brightness = 10 };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Adjusted: Yes", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void EnsureToolTipLoaded_WhenNotAdjusted_DoesNotContainAdjustedLabel()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+
+        vm.EnsureToolTipLoaded();
+
+        Assert.DoesNotContain("Adjusted", vm.ToolTipText);
+    }
+
+    [Fact]
+    public void BrightnessChanged_ResetsToolTipSoNextLoadReflectsAdjustedState()
+    {
+        var item = new PhotoItem { FileName = "photo.jpg", FullPath = @"Z:\nonexistent\photo.jpg" };
+        var vm = new PhotoItemViewModel(item);
+        vm.EnsureToolTipLoaded();
+        Assert.DoesNotContain("Adjusted", vm.ToolTipText);
+
+        vm.Brightness = 10;
+        vm.EnsureToolTipLoaded();
+
+        Assert.Contains("Adjusted: Yes", vm.ToolTipText);
+    }
+
     // ── FormatSize ────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -424,6 +492,92 @@ public class PhotoItemViewModelTests
         int result = PhotoItemViewModel.ReadOrientationFromMetadata(meta);
 
         Assert.Equal(8, result);
+    }
+
+    // ── ApplyAdjustments — STA required (creates WriteableBitmap) ────────────────
+
+    private static BitmapSource MakeBgraPixel(byte b, byte g, byte r, byte a)
+    {
+        var src = BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32, null, new byte[] { b, g, r, a }, 4);
+        src.Freeze();
+        return src;
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_ZeroBrightnessAndContrast_ReturnsSameSource()
+    {
+        var src = MakeBgraPixel(100, 100, 100, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 0, 0);
+        Assert.Same(src, result);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_BrightnessOnly_AddsScaledValue()
+    {
+        // v=100, brightness=20 → 100 + 20/100*255 = 151
+        var src = MakeBgraPixel(100, 100, 100, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 20, 0);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(new byte[] { 151, 151, 151, 255 }, pixels);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_ContrastOnly_ScalesAroundMidpoint()
+    {
+        // v=200, contrast=50 → (200-128)*1.5+128 = 236
+        var src = MakeBgraPixel(200, 200, 200, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 0, 50);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(new byte[] { 236, 236, 236, 255 }, pixels);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_MidpointGray_UnaffectedByContrastAlone()
+    {
+        // v=128 is the contrast pivot — unchanged regardless of contrast value.
+        var src = MakeBgraPixel(128, 128, 128, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 0, 75);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(new byte[] { 128, 128, 128, 255 }, pixels);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_ClampsAboveWhite()
+    {
+        var src = MakeBgraPixel(250, 250, 250, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 100, 0);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(new byte[] { 255, 255, 255, 255 }, pixels);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_ClampsBelowBlack()
+    {
+        var src = MakeBgraPixel(10, 10, 10, 255);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, -100, 0);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(new byte[] { 0, 0, 0, 255 }, pixels);
+    }
+
+    [StaFact]
+    public void ApplyAdjustments_PreservesAlphaChannel()
+    {
+        var src = MakeBgraPixel(100, 100, 100, 128);
+        var result = PhotoItemViewModel.ApplyAdjustments(src, 50, 50);
+
+        var pixels = new byte[4];
+        result.CopyPixels(pixels, 4, 0);
+        Assert.Equal(128, pixels[3]);
     }
 
     // ── LoadThumbnailAsync with real file (cache-miss path + semaphore + save) ─────

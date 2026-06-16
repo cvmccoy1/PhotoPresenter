@@ -99,6 +99,37 @@ public class SidecarRoundTripTests : IDisposable
     }
 
     [Fact]
+    public async Task SavePhotoOrder_ThenLoad_PreservesAdjustments()
+    {
+        var dir = _tmp.CreateSubDir("FolderAdjRt");
+        _tmp.CreateFile(@"FolderAdjRt\a.jpg");
+        var folder = MakeFolder(dir, "a.jpg");
+        folder.Photos[0].Brightness = 35;
+        folder.Photos[0].Contrast   = -15;
+        _service.SavePhotoOrder(folder, folder.Photos);
+
+        var loaded = await _service.LoadLibraryAsync(_tmp.Path);
+        var photo = loaded.Single(f => f.Name == "FolderAdjRt").Photos.Single();
+
+        Assert.Equal(35, photo.Brightness);
+        Assert.Equal(-15, photo.Contrast);
+    }
+
+    [Fact]
+    public void SavePhotoOrder_NoAdjustments_AdjustmentsKeyAbsentInJson()
+    {
+        var dir = _tmp.CreateSubDir("FolderAdjAbsent");
+        _tmp.CreateFile(@"FolderAdjAbsent\a.jpg");
+        var folder = MakeFolder(dir, "a.jpg"); // no adjustments set
+        _service.SavePhotoOrder(folder, folder.Photos);
+
+        var json = File.ReadAllText(System.IO.Path.Combine(dir, "_photoorder.json"));
+        using var doc = JsonDocument.Parse(json);
+
+        Assert.False(doc.RootElement.TryGetProperty("adjustments", out _));
+    }
+
+    [Fact]
     public void SavePhotoOrder_NoCaptions_CaptionsKeyAbsentInJson()
     {
         var dir = _tmp.CreateSubDir("FolderE");

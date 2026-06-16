@@ -627,8 +627,14 @@ public partial class OrganiseView : UserControl
         }
 
         var clicked = fe.DataContext as PhotoItemViewModel;
+        if (clicked == null) return;
         var selected = PhotoList.SelectedItems.OfType<PhotoItemViewModel>().ToList();
-        if (clicked == null || !selected.Contains(clicked) || selected.Count <= 1) return;
+        var targets = selected.Contains(clicked) ? selected : new List<PhotoItemViewModel> { clicked };
+
+        // Adjust Brightness/Contrast — disabled when every target is a video.
+        SetMenuItemEnabled(cm, "AdjustImage", targets.Any(p => !p.IsVideo));
+
+        if (!selected.Contains(clicked) || selected.Count <= 1) return;
 
         // Open / Open With — disabled for multi-selection.
         SetMenuItemEnabled(cm, "Open",     false);
@@ -669,6 +675,21 @@ public partial class OrganiseView : UserControl
         var dlg = new CaptionDialog(existing) { Owner = Window.GetWindow(this) };
         if (dlg.ShowDialog() == true)
             Vm.SetCaptions(selected, dlg.Caption);
+    }
+
+    private void PhotoAdjust_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm == null) return;
+        var targets = SelectedTargets<PhotoItemViewModel>(PhotoList, sender)
+            .Where(p => !p.IsVideo)
+            .ToList();
+        if (targets.Count == 0) return;
+
+        var seed = targets[0];
+        var dlg = new ImageAdjustmentDialog(seed.FullPath, seed.Brightness, seed.Contrast)
+            { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() == true)
+            Vm.SetAdjustments(targets, dlg.Brightness, dlg.Contrast);
     }
 
     private void PhotoTile_MouseEnter(object sender, MouseEventArgs e)

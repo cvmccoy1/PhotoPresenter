@@ -1,0 +1,54 @@
+<Window x:Class="PhotoPresenter.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:PhotoPresenter.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="Settings"
+        Width="340" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <StackPanel Margin="20,18,20,18">
+        <TextBlock Text="Theme" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
+        <ComboBox x:Name="ThemeComboBox" Margin="0,0,0,14">
+            <ComboBoxItem Tag="Light">Light</ComboBoxItem>
+            <ComboBoxItem Tag="Dark">Dark</ComboBoxItem>
+            <ComboBoxItem Tag="HighContrastLight">High Contrast Light</ComboBoxItem>
+            <ComboBoxItem Tag="HighContrastDark">High Contrast Dark</ComboBoxItem>
+            <ComboBoxItem Tag="SlateBlue">Slate Blue</ComboBoxItem>
+            <ComboBoxItem Tag="Forest">Forest</ComboBoxItem>
+            <ComboBoxItem Tag="Sunset">Sunset</ComboBoxItem>
+            <ComboBoxItem Tag="Amethyst">Amethyst</ComboBoxItem>
+            <ComboBoxItem Tag="Teal">Teal</ComboBoxItem>
+        </ComboBox>
+
+        <TextBlock Text="Text Size" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
+        <ComboBox x:Name="TextComboBox" Margin="0,0,0,14">
+            <ComboBoxItem Tag="Small">Small</ComboBoxItem>
+            <ComboBoxItem Tag="Normal">Normal</ComboBoxItem>
+            <ComboBoxItem Tag="Large">Large</ComboBoxItem>
+            <ComboBoxItem Tag="XLarge">Extra Large</ComboBoxItem>
+        </ComboBox>
+
+        <TextBlock Text="Autoplay Interval (Present mode)" FontSize="11" Foreground="#555" Margin="0,0,0,4"/>
+        <ComboBox x:Name="AutoplayIntervalComboBox" Margin="0,0,0,14">
+            <ComboBoxItem Tag="2">2 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="3">3 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="5">5 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="10">10 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="15">15 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="20">20 seconds</ComboBoxItem>
+            <ComboBoxItem Tag="30">30 seconds</ComboBoxItem>
+        </ComboBox>
+
+        <CheckBox Content="Fade Transitions"
+                  IsChecked="{Binding PresentVM.IsFadeEnabled}"
+                  Margin="0,0,0,18"/>
+
+        <Button Content="Close" Width="80" HorizontalAlignment="Right"
+                IsDefault="True" IsCancel="True" Padding="0,4"/>
+    </StackPanel>
+</Window>

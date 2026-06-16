@@ -324,6 +324,30 @@ public class OrganiseViewModelTests
         Assert.False(photo.IsFavorite);
     }
 
+    [Fact]
+    public async Task SetAdjustments_SetsBrightnessAndContrastOnAllSelected()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg", "b.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        var photos = vm.SelectedFolder.Photos.ToList();
+
+        vm.SetAdjustments(photos, 30, -20);
+
+        Assert.All(photos, p => Assert.Equal(30, p.Brightness));
+        Assert.All(photos, p => Assert.Equal(-20, p.Contrast));
+    }
+
+    [Fact]
+    public async Task SetAdjustments_NoSelectedFolder_DoesNotThrow()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        var orphan = new PhotoItemViewModel(new PhotoItem { FileName = "x.jpg", FullPath = @"Z:\x.jpg" });
+
+        var ex = Record.Exception(() => vm.SetAdjustments([orphan], 10, 10));
+
+        Assert.Null(ex);
+    }
+
     // ── Undo ─────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -388,6 +412,21 @@ public class OrganiseViewModelTests
         vm.Undo();
 
         Assert.False(photo.IsFavorite);
+    }
+
+    [Fact]
+    public async Task Undo_AfterSetAdjustments_RestoresPreviousValues()
+    {
+        var vm = await BuildVm(MakeFolder("A", "a.jpg"));
+        vm.SelectedFolder = vm.Folders[0];
+        var photo = vm.SelectedFolder.Photos[0];
+        vm.SetAdjustments([photo], 10, 10);
+        vm.SetAdjustments([photo], 40, -40);
+
+        vm.Undo();
+
+        Assert.Equal(10, photo.Brightness);
+        Assert.Equal(10, photo.Contrast);
     }
 
     [Fact]

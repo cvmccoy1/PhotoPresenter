@@ -56,6 +56,7 @@ public partial class PresentViewModel : ObservableObject
 
     [ObservableProperty] private bool _isAutoplayEnabled;
     [ObservableProperty] private bool _isFadeEnabled = true;
+    [ObservableProperty] private int _autoplayIntervalSeconds = 5;
 
     public double MirrorScaleX => CurrentIsMirrored ? -1.0 : 1.0;
 
@@ -225,7 +226,7 @@ public partial class PresentViewModel : ObservableObject
 
         try
         {
-            var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(photo.FullPath, 0));
+            var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(photo.FullPath, 0, photo.Brightness, photo.Contrast));
             if (seq == _loadSequence)
             {
                 CurrentImage = bmp;
@@ -279,7 +280,7 @@ public partial class PresentViewModel : ObservableObject
         var path = nextItem.FullPath;
         try
         {
-            var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 0));
+            var bmp = await Task.Run(() => PhotoItemViewModel.LoadBitmap(path, 0, nextItem.Brightness, nextItem.Contrast));
             _preloadedImage = bmp;
             _preloadedFolderIndex = nextFolder;
             _preloadedPhotoIndex = nextPhoto;
