@@ -10,7 +10,8 @@ A Windows WPF application for presenting family photo and video collections on a
 - Browse a parent folder containing subfolders of photos and videos
 - Drag and drop subfolders to set a custom presentation order
 - Click **Sort by Name** in the Folders pane to sort all folders alphabetically (A→Z); a confirmation is shown before the saved order is updated
-- Select a subfolder and drag and drop its items to reorder them
+- Select a subfolder and drag and drop its items to reorder them; drag items from one subfolder to another to move them to a different folder
+- Click **Sort by Date** in the Photos/Videos pane to sort all items in the selected folder by creation date (oldest first); a confirmation is shown first
 - Both panes support multi-selection: **Ctrl+Click** toggles an item, **Shift+Click** selects a range, **Ctrl+A** selects all; clicking empty space clears the selection
 - Drag a selected item to move the entire selection together, preserving relative order
 - **Delete** removes all selected items from the presentation at once
@@ -24,25 +25,32 @@ A Windows WPF application for presenting family photo and video collections on a
 - Right-click any photo or video and choose **Open** to open it in its default app, or **Open With…** to choose another app; double-clicking a tile does the same as **Open**
 - Hover over any photo or video tile to see a tooltip showing its type, date, dimensions (photos) or length (videos), and file size
 - Right-click any photo or video and choose **Mirror** to horizontally flip it; right-click again and choose **Remove Mirror** to restore it; with a multi-selection, each item toggles independently — if states are mixed, both **Mirror** and **Remove Mirror** appear and apply only to the applicable items; the flip is shown on the thumbnail in Organise mode (photos) and applied during Present mode for both photos and videos; mirror state is saved to the sidecar and covered by undo
+- Right-click any photo or video and choose **Add to Favorites** to mark it; right-click again to **Remove from Favorites**; with a multi-selection the menu applies the action to all applicable items; favorited items show a star (★) badge on their thumbnail; hover a tile to see "Favorite: Yes" in the tooltip; favorite state is saved to the sidecar and covered by undo
+- Right-click any photo (not video) and choose **Adjust Brightness/Contrast…** to open a dialog with two sliders (−100 to +100); the preview updates live as you move the sliders; click **OK** to apply, **Reset** to zero both sliders, or **Cancel** to discard; adjustments appear on the thumbnail immediately, are saved to the sidecar, covered by undo, and applied automatically in Present mode
 - Right-click any photo or video and choose **Add Caption** to attach a text caption; right-click again to **Edit Caption** or **Delete Caption**; with a multi-selection, these become **Set Caption** (writes the same caption to all selected items) and **Delete Caption** (removes captions from all that have one)
   - Press **Shift+Enter** in the caption dialog to insert a line break; the text box grows as lines are added
   - Multi-line captions are displayed centered in both Organise mode (below the thumbnail) and Present mode (overlaid at the bottom of the screen)
   - The caption dialog includes a built-in spellchecker — misspelled words are underlined in red; right-click a word to see correction suggestions
-- **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, and caption changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
+- **Ctrl+Z** or the **↩ Undo** toolbar button undoes the last action; up to 20 steps of history are kept — covers all reorders, removes, restores, sorts, mirror, favorites, captions, and brightness/contrast changes; a multi-select operation counts as one step; the history is cleared when a new folder is opened
 - Thumbnails load on demand: folder-card thumbnails (left pane) load immediately on launch; photo thumbnails load when you click a folder, keeping startup fast even with thousands of files; decoded thumbnails are cached in `%LOCALAPPDATA%\PhotoPresenter\thumbcache\` so subsequent visits are near-instant
 - Custom order and removed items are saved to small JSON sidecar files — your actual files and folders are never renamed or moved
 - The app watches for external changes while it is running: if you rename a subfolder in Explorer, the new name appears immediately and the saved order is updated automatically; if a subfolder or photo is deleted externally, it is removed from the list and a brief notice appears; new photos copied into the selected folder appear automatically
 - Click a folder (and optionally an item) before switching to Present mode to start from that point; press **Space**, **F5**, or click **▶ Present** to enter Present mode; when you exit Present mode the last photo or video shown becomes the selected item in Organise mode, so pressing **Space** or **F5** again picks up exactly where you left off
   - **Space** and **F5** are intercepted only when a list item or the window background has focus; if a toolbar button, checkbox, or dropdown has keyboard focus, Space activates that control as normal
+- Tick **Favorites Only** (next to the ▶ Present button) to limit the presentation to favorited items only; the overall counter reflects only the favorites set; the presentation starts from the currently selected item if it is a favorite, or the first favorite otherwise
+- Click **Export Favorites…** in the toolbar to copy all favorited photos and videos to a folder of your choice (flat copy, no subfolders, existing files skipped); if the destination already contains files that are not favorites, a confirmation dialog lists them and offers: **Delete & Export** (removes non-favorites then copies), **Export Only** (copies without deleting), or **Cancel**
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
-- Choose a **color theme** and **text size** independently from the toolbar dropdowns; both are remembered between sessions and take effect immediately without a restart
+- Press **?** at any time to open a keyboard shortcuts reference
+- Click **Settings…** in the toolbar to open the Settings window; changes to Theme and Text Size take effect immediately
   - **Theme**: Light (default), Dark, High Contrast Light, High Contrast Dark, Slate Blue, Forest, Sunset, Amethyst, Teal
-  - **Text**: Small, Normal (default), Large, Extra Large — applies to any theme
+  - **Text Size**: Small, Normal (default), Large, Extra Large — applies to any theme
+  - **Autoplay Interval**: how long each photo is shown during autoplay in Present mode — 2, 3, 5 (default), 10, 15, 20, or 30 seconds
+  - **Fade Transitions**: smooth 250 ms opacity fade when advancing to the next photo in Present mode (enabled by default; not applied to videos)
 
 ### Present Mode
 - Fullscreen display on your TV or monitor
-- Starts at the folder and item selected in Organise mode
-- Clean black background, media fills the screen — no transitions, no effects
+- Starts at the folder and item selected in Organise mode; tick **Favorites Only** in the toolbar before entering to limit the presentation to favorited items
+- Clean black background, media fills the screen
 - Keyboard navigation:
   - **F5** — enter Present mode (also works from Organise mode)
   - **Right Arrow** — next item
@@ -50,11 +58,13 @@ A Windows WPF application for presenting family photo and video collections on a
   - **Left Arrow** — previous item
   - Automatically moves between subfolders at boundaries
   - **Escape** — return to Organise mode; the last item shown becomes the active selection so the next presentation resumes from that point
+  - **P** — toggle autoplay; each photo advances automatically after the configured interval (set in Settings); autoplay stops when a video is reached; a green **▶ Autoplay (P to stop)** indicator appears in the top-right corner while active
+  - **?** — open keyboard shortcuts reference
 - Photo zoom and pan:
   - **+** / **-** — zoom in / out
   - **Scroll wheel** — zoom in / out
   - **Click and drag** — pan a zoomed image
-- Overall counter — shows the global position of the current item across all folders (e.g. **759 of 1956**); displayed alongside the per-folder position for both photos and videos
+- Overall counter — shows the global position of the current item across all folders (e.g. **759 of 1956**); displayed alongside the per-folder position for both photos and videos; in Favorites Only mode the counter reflects only the favorites set
 - Video playback controls (shown at the bottom of the screen):
   - Scrub slider — click anywhere on the track to jump to that position; drag the thumb for precise live scrubbing (the video frame updates as you drag)
   - **↺** — restart from the beginning
@@ -93,6 +103,12 @@ If a sidecar file doesn't exist, folders are shown in alphabetical order and pho
 ### Captions
 Captions are stored in each subfolder's `_photoorder.json` sidecar under a `captions` key. They are never written to the image files themselves.
 
+### Favorites
+Favorites are stored in each subfolder's `_photoorder.json` sidecar under a `favorites` key (a list of filenames). The key is omitted entirely when no items in that folder are marked as favorites.
+
+### Image adjustments
+Brightness and contrast values are stored in each subfolder's `_photoorder.json` sidecar under an `adjustments` key (a dictionary mapping filename to `{ brightness, contrast }`). The key is omitted when no items have non-zero adjustments. Adjustments are applied non-destructively at render time — the original files are never modified.
+
 ### Removing and restoring items
 Removing a folder or photo from the presentation adds its name to the `removed` list in the relevant sidecar file. It will be excluded from Organise and Present modes on the next launch. Tick **Show All** to see removed items and restore them individually at any time.
 
@@ -124,7 +140,7 @@ PhotoPresenter/
 ├── Models/          Pure data models
 ├── Services/        File I/O, folder scanning, settings persistence
 ├── ViewModels/      MVVM logic (CommunityToolkit.Mvvm)
-└── Views/           XAML UI (MainWindow, OrganiseView, PresentView)
+└── Views/           XAML UI (MainWindow, OrganiseView, PresentView, dialogs)
 ```
 
 Built with [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet).

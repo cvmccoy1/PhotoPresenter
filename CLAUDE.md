@@ -42,28 +42,38 @@ WPF MVVM app with two modes — **Organise** and **Present** — wired via a Dat
 
 `MainViewModel.CurrentMode` (enum `AppMode`) controls `CurrentView` (computed property). `MainWindow.cs` subscribes to `PropertyChanged` on `MainViewModel` and handles the `WindowStyle`/`WindowState` transition for fullscreen Present mode.
 
-`SwitchToPresent()` captures `OrganiseVM.SelectedFolder` / `SelectedPhoto` and passes them as start indices to `PresentVM.SetFolders`. `SwitchToOrganise()` reads `PresentVM.CurrentFolder` / `CurrentPhotoItem` (read-only properties derived from the current index fields) and writes them back to `OrganiseVM.SelectedFolder` / `SelectedPhoto`, then sets `OrganiseVM.ScrollPhotoIntoViewRequested = true` before switching mode. `OrganiseView.OnLoaded` checks the flag (the view is recreated each mode switch), resets it, and dispatches `FolderList.ScrollIntoView` + `PhotoList.ScrollIntoView` at `DispatcherPriority.Background` — this runs after any saved-offset restore and overrides it, leaving both panes scrolled to show the last-viewed item.
+`SwitchToPresent()` checks `MainViewModel.FavoritesOnly`. When false, it captures `OrganiseVM.SelectedFolder` / `SelectedPhoto` and passes them as start indices to `PresentVM.SetFolders` (standard path). When true, it compacts the folder list: for each non-empty folder it builds a `List<PhotoItemViewModel>` of only the `IsFavorite` items, then calls `PresentVM.SetFolders` with those folders plus a parallel `effectivePhotos` list. If no favorites exist anywhere, it calls `OrganiseVM.ShowStatus("No favorites to present.")` and aborts. The start position in favorites mode is the first favorite on or after the selected photo (or the first favorite overall if none matches). `SwitchToOrganise()` reads `PresentVM.CurrentFolder` / `CurrentPhotoItem` (read-only properties derived from the current index fields) and writes them back to `OrganiseVM.SelectedFolder` / `SelectedPhoto`, then sets `OrganiseVM.ScrollPhotoIntoViewRequested = true` before switching mode. `OrganiseView.OnLoaded` checks the flag (the view is recreated each mode switch), resets it, and dispatches `FolderList.ScrollIntoView` + `PhotoList.ScrollIntoView` at `DispatcherPriority.Background` — this runs after any saved-offset restore and overrides it, leaving both panes scrolled to show the last-viewed item.
 
 ### Session persistence
 
-`UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name), `LastSelectedPhoto` (filename), `PhotoScrollOffset`, `FolderScrollOffset`, `ShowAllFolders`, `ShowAllPhotos`, `Volume` (Present mode, default 0.5), window bounds, `WindowMaximized`, `SplitterPosition`, `Theme` (default `"Light"`), and `TextSize` (default `"Normal"`). All names are matched case-insensitively on restore. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point for most settings — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds window bounds, `LastSelectedFolder`, `LastSelectedPhoto`, `Theme`, and `TextSize` before writing. On startup, `MainViewModel` passes both saved names to `OrganiseViewModel.LoadAsync`, which restores the folder first (falling back to the first folder if not found), then restores the photo within that folder's active `Photos` collection (falling back to no selection if not found). `OnSelectedFolderChanged` resets `SelectedPhoto` to null synchronously, so the photo assignment in `LoadAsync` runs after that reset. `ShowAllFolders` and `ShowAllPhotos` are set on `OrganiseVM` immediately after firing `LoadAsync` (which suspends at its first `await`), so the flags are in place before the collections are populated on resume.
+`UserSettings` (`Services/UserSettings.cs`) stores: `LastParentFolder`, `LastSelectedFolder` (folder name), `LastSelectedPhoto` (filename), `PhotoScrollOffset`, `FolderScrollOffset`, `ShowAllFolders`, `ShowAllPhotos`, `Volume` (Present mode, default 0.5), `FadeTransitionEnabled` (default `true`), `AutoplayIntervalSeconds` (default `5`), window bounds, `WindowMaximized`, `SplitterPosition`, `Theme` (default `"Light"`), and `TextSize` (default `"Normal"`). All names are matched case-insensitively on restore. `Window_Closing` in `MainWindow.xaml.cs` is the authoritative save point for most settings — it reloads the file first to pick up any mid-session saves (e.g. splitter drags), then adds window bounds, `LastSelectedFolder`, `LastSelectedPhoto`, `Theme`, and `TextSize` before writing. On startup, `MainViewModel` passes both saved names to `OrganiseViewModel.LoadAsync`, which restores the folder first (falling back to the first folder if not found), then restores the photo within that folder's active `Photos` collection (falling back to no selection if not found). `OnSelectedFolderChanged` resets `SelectedPhoto` to null synchronously, so the photo assignment in `LoadAsync` runs after that reset. `ShowAllFolders` and `ShowAllPhotos` are set on `OrganiseVM` immediately after firing `LoadAsync` (which suspends at its first `await`), so the flags are in place before the collections are populated on resume.
 
 `PhotoScrollOffset` and `FolderScrollOffset` are saved and restored in `OrganiseView.xaml.cs`. `OnLoaded` subscribes to the parent window's `Closing` event (`OnWindowClosing`), which reads both `ScrollViewer` `VerticalOffset` values in a single load-update-save pass. Restoration uses `_pendingPhotoScrollOffset` and `_pendingFolderScrollOffset` fields (−1 = no restore pending): `OnLoaded` reads the saved values and subscribes to `OrganiseViewModel.PropertyChanged`; when `SelectedFolder` is set by `LoadAsync` (folders are already populated at that point), `SchedulePhotoScrollRestore` and `ScheduleFolderScrollRestore` each dispatch `ScrollToVerticalOffset` at `DispatcherPriority.Background` (after layout). A fallback in `OnLoaded` handles the race where `LoadAsync` completes before `OnLoaded` fires. Each flag is cleared immediately so only the initial load triggers a restore. `GetPhotoScrollViewer` / `GetFolderScrollViewer` walk one level into the list's visual tree (Border → ScrollViewer).
 
 ### Sidecar file format
 
-- `_photofolderorder.json` in parent folder — `{ "order": ["FolderName1", "FolderName2", ...] }`
-- `_photoorder.json` in each subfolder — `{ "order": ["img001.jpg", "img002.jpg", ...] }`
+- `_photofolderorder.json` in parent folder — `{ "order": [...], "removed": [...] }`
+- `_photoorder.json` in each subfolder — all keys except `"order"` are optional and omitted when empty:
+  ```json
+  {
+    "order":       ["img001.jpg", ...],
+    "removed":     ["img003.jpg", ...],
+    "mirrored":    ["img002.jpg", ...],
+    "favorites":   ["img001.jpg", ...],
+    "captions":    { "img001.jpg": "Caption text" },
+    "adjustments": { "img002.jpg": { "brightness": 10, "contrast": -5 } }
+  }
+  ```
 
 Missing entries (renamed/deleted files) are silently skipped; unmentioned items append at the end in alphabetical / creation-date order.
 
 ### Undo
 
-`OrganiseViewModel` maintains a `List<object>` undo stack (max 20 entries) of two snapshot record types: `FolderSnapshot` (ordered list of all folder VMs + `IsRemoved` flags) and `PhotoSnapshot` (folder identity + ordered list of all photo VMs + `IsRemoved` + `Caption`). Every mutating method calls `PushFolderUndo()` or `PushPhotoUndo()` before making changes. `Undo()` pops the top entry and reconstructs both the active and all-items collections from the snapshot, then re-saves the sidecar. Multi-select operations use bulk methods (`RemoveFolders`, `RestorePhotos`, `SetCaptions`, etc.) so the whole selection is one undo step. The stack is cleared in `LoadAsync()`. `CanUndo` (plain bool property with manual `OnPropertyChanged`) drives the toolbar button's `IsEnabled`. Ctrl+Z is handled in `MainWindow.Window_PreviewKeyDown` when in Organise mode.
+`OrganiseViewModel` maintains a `List<object>` undo stack (max 20 entries) of two snapshot record types: `FolderSnapshot` (ordered list of all folder VMs + `IsRemoved` flags) and `PhotoSnapshot` (folder identity + ordered list of all photo VMs + `IsRemoved` + `Caption` + `IsMirrored` + `IsFavorite` + `Brightness` + `Contrast`). Every mutating method calls `PushFolderUndo()` or `PushPhotoUndo()` before making changes. `Undo()` pops the top entry and reconstructs both the active and all-items collections from the snapshot, then re-saves the sidecar. Multi-select operations use bulk methods (`RemoveFolders`, `RestorePhotos`, `SetCaptions`, etc.) so the whole selection is one undo step. The stack is cleared in `LoadAsync()`. `CanUndo` (plain bool property with manual `OnPropertyChanged`) drives the toolbar button's `IsEnabled`. Ctrl+Z is handled in `MainWindow.Window_PreviewKeyDown` when in Organise mode.
 
 ### Key bindings
 
-Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Space` (Organise mode) = enter Present mode, but only if `Keyboard.FocusedElement` is not a `ButtonBase`, `ComboBox`, or `TextBoxBase` (so toolbar controls still receive Space normally); `Ctrl+Z` (Organise mode) = undo. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `Escape` = back to Organise (syncs last-viewed folder/photo back to Organise mode). Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
+Handled in `MainWindow.Window_PreviewKeyDown`: `F5` (Organise mode) = enter Present mode; `Space` (Organise mode) = enter Present mode, but only if `Keyboard.FocusedElement` is not a `ButtonBase`, `ComboBox`, or `TextBoxBase` (so toolbar controls still receive Space normally); `Ctrl+Z` (Organise mode) = undo; `?` (both modes) = open `ShortcutsWindow`. In Present mode: `Right`/`Space` = next, `Left` = previous, `+`/`-` = zoom, `P` = toggle `IsAutoplayEnabled`, `Escape` = back to Organise (syncs last-viewed folder/photo back to Organise mode). Scroll wheel and right-click pan are handled in `PresentView.xaml.cs`.
 
 ### Overall counter
 
@@ -119,7 +129,9 @@ Both pane context menus expose **Open Folder in Explorer** (added at the bottom 
 
 ### Theming
 
-The toolbar is a `Grid` (`x:Name="MainToolbar"`) with two columns: a `*`-width left `ToolBarTray` (Browse Folder, path, Undo, Theme dropdown, Text dropdown, About) and an `Auto`-width right `ToolBarTray` (▶ Present, right-justified). `MainToolbar.Visibility` is toggled in `ApplyMode` when switching to/from Present mode. The toolbar exposes two independent dropdowns — **Theme** (color) and **Text** (size) — wired to two separate `MergedDictionaries` slots in `App.xaml`: `[0]` = color theme, `[1]` = text size. `App.OnStartup` (`App.xaml.cs`) calls `ThemeService.ApplyColor(settings.Theme)` then `ThemeService.ApplyTextSize(settings.TextSize)` before the window appears so there is no flash. `ThemeService` (`Services/ThemeService.cs`) has two methods that each replace the corresponding slot; all `DynamicResource` bindings update live.
+The toolbar is a `Grid` (`x:Name="MainToolbar"`) with two columns: a `*`-width left `StackPanel` (containing a `ToolBarTray` with Undo, Settings…, Export Favorites…, About buttons) and an `Auto`-width right `StackPanel` (Favorites Only `CheckBox` + ▶ Present `Button`, right-justified). A second `ToolBarTray` below holds the Parent Folder… button and folder path. `MainToolbar.Visibility` is toggled in `ApplyMode` when switching to/from Present mode.
+
+Theme and Text Size are configured in `SettingsWindow.xaml` (opened via Settings… button), which receives the `MainViewModel` instance so its `PresentVM.IsFadeEnabled` / `PresentVM.AutoplayIntervalSeconds` bindings work. `SettingsWindow` uses the same `InitThemeComboBox()` / `InitTextComboBox()` + deferred-`SelectionChanged` pattern as the former inline toolbar controls: selections are set before wiring `SelectionChanged`, which immediately calls `ThemeService.ApplyColor` / `ThemeService.ApplyTextSize` and saves settings, preventing spurious saves on open. The autoplay interval ComboBox uses `SelectedValue="{Binding PresentVM.AutoplayIntervalSeconds}"` two-way and is saved at `Window_Closing` (same as `IsFadeEnabled`). `App.OnStartup` (`App.xaml.cs`) calls `ThemeService.ApplyColor(settings.Theme)` then `ThemeService.ApplyTextSize(settings.TextSize)` before the main window appears so there is no flash. `ThemeService` (`Services/ThemeService.cs`) has two methods that each replace the corresponding `MergedDictionaries` slot (`[0]` = color theme, `[1]` = text size); all `DynamicResource` bindings update live.
 
 **Color themes** (`PhotoPresenter/Themes/*.xaml` — 9 files): Light, Dark, HighContrastLight, HighContrastDark, SlateBlue, Forest, Sunset, Amethyst, Teal. Each defines only `SolidColorBrush` resources: ten named brushes (`AppBackground`, `PanelBackground`, `PanelText`, `SplitterBackground`, `ListBackground`, `ThumbnailBackground`, `VideoOverlayBackground`, `VideoIconForeground`, `FilenameForeground`, `CaptionForeground`) plus four `SystemColors` ListBox-selection key overrides. The colorful themes (SlateBlue, Forest, Sunset, Amethyst, Teal) additionally override `SystemColors.MenuBrushKey/MenuTextBrushKey/MenuHighlightBrushKey/MenuBarBrushKey` so context menus adopt the palette.
 
@@ -162,6 +174,54 @@ All FSW callbacks arrive on a thread-pool thread and dispatch to the UI thread v
 
 The `CaptionBox` TextBox has `SpellCheck.IsEnabled="True"` (set in XAML). The code-behind constructor sets `CaptionBox.Language = XmlLanguage.GetLanguage(CultureInfo.CurrentUICulture.IetfLanguageTag)` so the correct Windows dictionary is used (e.g. en-GB, fr-FR). This gives red squiggly underlines and right-click correction suggestions with no additional packages.
 
+### Favorites
+
+`IsFavorite` (bool) lives on `PhotoItem` (model) and `PhotoItemViewModel`. Toggling is a user gesture — never inferred from metadata.
+
+Context menu: "Add to Favorites" (tag `Favorite`) shown when `IsFavorite=False`; "Remove from Favorites" (tag `RemoveFavorite`) shown when `IsFavorite=True`. `PhotoTile_ContextMenuOpening` applies multi-select visibility logic (same pattern as Mirror). `PhotoFavorite_Click` calls `OrganiseViewModel.ToggleFavorites(selected)`, which pushes a photo undo snapshot and saves the sidecar. `OnIsFavoriteChanged` resets `_toolTipLoaded = false` so "Favorite: Yes" appears on next hover.
+
+Persistence: stored in `_photoorder.json` under a `"favorites"` key (list of filenames); omitted entirely when no items are favorited. `PhotoOrderSidecar.Favorites` is `List<string>?`.
+
+**Favorites Only present mode**: `MainViewModel.FavoritesOnly` (bool, bound to a `CheckBox` in the toolbar). When true, `SwitchToPresent` builds a compacted list: for each folder whose photos contains at least one `IsFavorite && !IsRemoved` item, it creates a `List<PhotoItemViewModel>` of only those items. The full folder list and this parallel `effectivePhotos` list are passed to `PresentVM.SetFolders`. `PresentViewModel` stores `effectivePhotos` as `_effectivePhotoLists` (a `List<IReadOnlyList<PhotoItemViewModel>>`); `CurrentPhotos`, cumulative counts, and preload all read from `_effectivePhotoLists[folderIndex]` rather than `folder.Photos`. This decouples navigation from folder VM structure — folder VMs are never modified.
+
+`OrganiseViewModel.GetAllFavorites()` returns all non-removed favorites across all non-removed folders (used by Export Favorites).
+
+### Image adjustments
+
+`Brightness` and `Contrast` (both `int`, range −100 to +100, default 0) live on `PhotoItem` and `PhotoItemViewModel`. Adjustments are non-destructive: never baked into stored bitmaps or files.
+
+`PhotoItemViewModel.LoadBitmap(path, decodeWidth, brightness, contrast)` routes through `ApplyAdjustments(BitmapSource, int, int)` at the end of both the HEIC and standard decode branches. `ApplyAdjustments` early-returns the source unchanged when both values are 0 (zero cost for the common case). Otherwise it converts to `PixelFormats.Bgra32`, copies pixels into a `byte[]`, applies `v = (v − 128) × (1 + contrast/100.0) + 128 + brightness/100.0 × 255` per BGR channel clamped to [0, 255], writes into a `WriteableBitmap`, and `Freeze()`s it.
+
+`LoadThumbnailAsync` bypasses `ThumbnailCache` entirely when `Brightness != 0 || Contrast != 0` — the cache key does not include adjustment values, so adjusted thumbnails are always recomputed to avoid stale or incorrectly-adjusted cached images. `OnBrightnessChanged` / `OnContrastChanged` sync the model and call `ReloadThumbnail()` (which calls `LoadThumbnailAsync` directly, bypassing the `_thumbnailRequested` guard in `EnsureThumbnailLoaded`). Both calls also reset `_toolTipLoaded`.
+
+`OrganiseViewModel.SetAdjustments(photos, brightness, contrast)` pushes a photo undo snapshot then sets both values on every item and saves the sidecar. `PhotoTile_ContextMenuOpening` hides the Adjust menu item when every selected item is a video. `ImageAdjustmentDialog` (`Views/ImageAdjustmentDialog.xaml`) decodes a 300 px preview bitmap once on open, then calls `ApplyAdjustments` live on every slider change (cheap in-memory op, no disk re-read).
+
+Persistence: `"adjustments"` dict in `_photoorder.json`; the key is omitted when no items have non-zero adjustments.
+
+### Autoplay
+
+`PresentView.xaml.cs` owns a `DispatcherTimer _autoplayTimer`. `UpdateAutoplayTimerState()` is called on every `IsAutoplayEnabled` or `AutoplayIntervalSeconds` property change: it starts the timer (with interval from `Vm.AutoplayIntervalSeconds`) when `IsAutoplayEnabled && !CurrentIsVideo`, and stops it otherwise. On `Tick`, it calls `Vm.NextPhoto()`. Autoplay stops automatically when a video is reached (the `CurrentIsVideo` change triggers `UpdateAutoplayTimerState`). A green "▶ Autoplay (P to stop)" overlay (top-right corner) is shown via `DataTrigger` on `IsAutoplayEnabled`; hidden when viewing a video.
+
+`IsAutoplayEnabled` is not persisted (resets to false on every app launch). `AutoplayIntervalSeconds` is persisted via `UserSettings.AutoplayIntervalSeconds` (default 5). `P` key toggles `pvm.IsAutoplayEnabled` in `MainWindow.HandleKeyDown`.
+
+### Fade transitions
+
+When `IsFadeEnabled` is true, `PresentView.xaml.cs` begins a 250 ms `DoubleAnimation` on `PhotoImage.OpacityProperty` (0 → 1) immediately after a new photo bitmap is assigned. Not applied to videos (the `MediaElement` is never faded). `IsFadeEnabled` is bound two-way to the **Fade Transitions** checkbox in `SettingsWindow`; persisted as `UserSettings.FadeTransitionEnabled`.
+
+### Settings window
+
+`SettingsWindow` (`Views/SettingsWindow.xaml`) is a modal dialog (same pattern as `AboutWindow`) opened from the **Settings…** toolbar button. Its constructor receives `MainViewModel` and sets it as `DataContext`, enabling direct binding to `PresentVM.IsFadeEnabled` and `PresentVM.AutoplayIntervalSeconds`. `InitThemeComboBox()` / `InitTextComboBox()` set initial selections before wiring `SelectionChanged`, preventing spurious saves. Theme and Text Size changes are saved immediately; Fade and Autoplay are saved by `MainWindow.Window_Closing` reading from the bound VM properties.
+
+### Keyboard shortcuts dialog
+
+`ShortcutsWindow` (`Views/ShortcutsWindow.xaml`) is a parameterless modal listing all key bindings for both modes in two headed sections. Opened by the `?` key handler in `MainWindow.HandleKeyDown` — the check runs before the `CurrentMode != Present` early-return guard, so `?` works in both modes. Static content only; no data binding.
+
+### Export Favorites
+
+**`ExportProgressDialog`** (`Views/ExportProgressDialog.xaml`) is a modal progress window. Its constructor takes `IReadOnlyList<PhotoItemViewModel> favorites`, `string destFolder`, and an optional `IReadOnlyList<string>? toDelete`. `StartExportAsync` runs on `Loaded`: phase 1 deletes each file in `toDelete` (skipping failures silently), phase 2 copies each favorite (skipping if the destination file already exists). A single progress bar spans both phases.
+
+**`ExportDeleteConfirmDialog`** (`Views/ExportDeleteConfirmDialog.xaml`) is shown when the destination folder contains files not in the current favorites set. It lists those filenames in a scrollable `ListBox` and offers three buttons: **Delete & Export** (sets `Choice = DeleteAndExport`), **Export Only** (sets `Choice = ExportOnly`), **Cancel** (sets `Choice = Cancel`). `ExportFavorites_Click` in `MainWindow.xaml.cs` computes `toDelete` via `Directory.GetFiles(destFolder)` filtered by the favorites `HashSet<string>` (case-insensitive), shows the dialog if needed, then opens `ExportProgressDialog` with the appropriate `deleteList`.
+
 ## Tests
 
 ```powershell
@@ -172,33 +232,45 @@ Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` wit
 
 ### Structure
 
+353 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 353`).
+
 ```
 Unit/
   FileClassificationTests.cs       — IsMediaFile, IsVideoFile
   SidecarParsingTests.cs           — ApplyFolderOrder, LoadPhotosForFolder (uses TempDirectory)
   OrganiseViewModelTests.cs        — Reorder, Remove/Restore, Undo, SetCaption/SetCaptions, ToggleMirrors,
+                                      ToggleFavorites, GetAllFavorites, SetAdjustments,
                                       SortFoldersByName, SortPhotosByDateAsync, FolderCountLabel,
                                       PhotoCountLabel, CurrentFolderItems/CurrentPhotoItems ShowAll filtering
                                       (mocked IPhotoLibraryService; LoadAsync(@"Z:\nonexistent") skips FSW)
   ExifOrientationTests.cs          — ApplyExifOrientation ([StaTheory]), ReadOrientationFromMetadata
   PhotoFolderViewModelTests.cs     — FolderToolTipText, UpdatePath cascade, constructor photo separation
   PhotoItemViewModelTests.cs       — HasThumbnail, EnsureThumbnailLoaded idempotency,
-                                      RetryThumbnailAfterDelayAsync early-exit and pending-check, UpdatePath
+                                      RetryThumbnailAfterDelayAsync early-exit and pending-check, UpdatePath,
+                                      Brightness/Contrast model sync and thumbnail reload, ApplyAdjustments
   PresentViewModelTests.cs         — OverallLabel format, cumulative-count correctness, start-position clamping,
                                       NextPhoto/PreviousPhoto navigation (incl. folder-boundary wrap),
+                                      effectivePhotos/FavoritesOnly navigation and label correctness,
                                       ZoomIn/ZoomOut/ZoomByDelta bounds, BeginPan/UpdatePan, RotateVideo,
                                       MirrorScaleX, HasCurrentCaption, PlayPauseIcon, UpdatePosition time format,
-                                      CurrentFolder/CurrentPhotoItem, SetFolders resets
+                                      CurrentFolder/CurrentPhotoItem, SetFolders resets, AutoplayIntervalSeconds
   TextUtilsTests.cs                — NormalizeCaption
+  CrossFolderMoveTests.cs          — MovePhotosToFolder reorder and undo
+  MainWindowKeyTests.cs            — HandleKeyDown dispatch for all key bindings
+  MainWindowTests.cs               — MainWindow construction and mode switching
+  FswHandlerTests.cs               — FileSystemWatcher Created/Deleted/Renamed handler logic
 Integration/
-  SidecarRoundTripTests.cs      — real temp folders, save→load round-trips
+  SidecarRoundTripTests.cs      — real temp folders, save→load round-trips (incl. favorites, adjustments)
   LibraryLoadTests.cs           — LoadLibraryAsync scenarios
-  UserSettingsTests.cs          — Load/Save with temp path
+  UserSettingsTests.cs          — Load/Save with temp path, AutoplayIntervalSeconds default and round-trip
+  OrganiseSyncTests.cs          — reconcile folder contents on selection
+  ThumbnailCacheTests.cs        — cache key construction, hit/miss, pruning
 Infrastructure/
   StaFactAttribute.cs           — [StaFact] runs test on STA thread (required for WPF imaging types)
   StaTheoryAttribute.cs         — [StaTheory] parameterized STA tests
   StaTestCase.cs                — STA thread runner
   TempDirectory.cs              — IDisposable temp folder; TinyJpegBytes = minimal valid 1×1 JPEG
+  WpfApplicationFixture.cs      — ensures a WPF Application instance exists for tests that need it
 ```
 
 ### Internal members exposed for testing
@@ -207,8 +279,11 @@ Infrastructure/
 |--------|------|--------------|
 | `ApplyFolderOrder` / `LoadPhotosForFolder` | `PhotoLibraryService.cs` | Sidecar parsing tests |
 | `ReadOrientationFromMetadata` / `ApplyExifOrientation` | `PhotoItemViewModel.cs` | EXIF orientation tests |
+| `ApplyAdjustments` | `PhotoItemViewModel.cs` | Brightness/contrast pixel-transform tests |
 | `Load(path)` / `Save(path)` overloads | `UserSettings.cs` | Settings round-trip tests |
 | `RetryThumbnailAfterDelayAsync()` | `PhotoItemViewModel.cs` | FSW thumbnail retry; awaitable so tests can exercise the loop without real delays |
+| `ShowStatus(message)` | `OrganiseViewModel.cs` | Status banner tests; also called by `SwitchToPresent` on no-favorites abort |
+| `HandleKeyDown(key, modifiers)` | `MainWindow.xaml.cs` | Key binding dispatch tests without needing real WPF key events |
 
 ### Key conventions
 
