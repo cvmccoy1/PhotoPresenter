@@ -194,7 +194,12 @@ public partial class MainWindow : Window
                 return true;
             case Key.Space:
                 if (pvm.CurrentIsVideo)
-                    pvm.IsPlaying = !pvm.IsPlaying;
+                {
+                    if (pvm.IsVideoEnded)
+                        pvm.NextPhoto();
+                    else
+                        pvm.IsPlaying = !pvm.IsPlaying;
+                }
                 else
                     pvm.NextPhoto();
                 return true;

@@ -42,6 +42,7 @@ public partial class PresentViewModel : ObservableObject
     [ObservableProperty] private bool _currentIsVideo;
     [ObservableProperty] private string _currentVideoPath = "";
     [ObservableProperty] private bool _isPlaying;
+    [ObservableProperty] private bool _isVideoEnded;
     [ObservableProperty] private double _volume = 0.5;
     [ObservableProperty] private string _positionLabel = "";
     [ObservableProperty] private string _playPauseIcon = "▶";
@@ -188,6 +189,7 @@ public partial class PresentViewModel : ObservableObject
         if (photos.Count == 0) return;
 
         var photo = photos[_currentPhotoIndex];
+        IsVideoEnded = false;
         CurrentIsMirrored = photo.IsMirrored;
 
         if (photo.IsVideo)

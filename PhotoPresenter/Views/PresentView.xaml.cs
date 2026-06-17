@@ -157,6 +157,7 @@ public partial class PresentView : UserControl
     {
         if (Vm != null) Vm.IsPlaying = false;
         _positionTimer.Stop();
+        if (Vm != null) Vm.IsVideoEnded = true;
         if (Vm?.IsAutoplayEnabled == true)
             Vm.NextPhoto();
     }
@@ -266,6 +267,7 @@ public partial class PresentView : UserControl
         VideoPlayer.Play();
         if (Vm != null)
         {
+            Vm.IsVideoEnded = false;
             Vm.IsPlaying = true;
             _positionTimer.Start();
         }

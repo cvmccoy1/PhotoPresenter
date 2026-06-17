@@ -373,6 +373,28 @@ public class MainWindowKeyTests
     }
 
     [Fact]
+    public void HandleKeyDown_Space_InPresentMode_OnEndedVideo_CallsNextPhoto()
+    {
+        _fixture.Invoke(() =>
+        {
+            var window = new MainWindow();
+            var vm = (MainViewModel)window.DataContext;
+            var folders = MakeFolders(3);
+            vm.PresentVM.SetFolders(folders, 0, 0);
+            vm.CurrentMode = AppMode.Present;
+            // Simulate a video that has reached the end.
+            vm.PresentVM.CurrentIsVideo = true;
+            vm.PresentVM.IsVideoEnded = true;
+
+            bool handled = window.HandleKeyDown(Key.Space, ModifierKeys.None);
+
+            Assert.True(handled);
+            // Should advance to next item, not toggle play/pause.
+            Assert.Same(folders[0].Photos[1], vm.PresentVM.CurrentPhotoItem);
+        });
+    }
+
+    [Fact]
     public void HandleKeyDown_F5_WithSelectedFolderAndPhoto_PresentVmStartsAtCorrectItem()
     {
         _fixture.Invoke(() =>
