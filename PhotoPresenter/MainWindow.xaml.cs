@@ -109,7 +109,32 @@ public partial class MainWindow : Window
         var favorites = _vm.OrganiseVM.GetAllFavorites();
         var dialog = new OpenFolderDialog { Title = "Select destination folder for exported favorites" };
         if (dialog.ShowDialog() != true) return;
-        new ExportProgressDialog(favorites, dialog.FolderName) { Owner = this }.ShowDialog();
+
+        string destFolder = dialog.FolderName;
+
+        var favoriteNames = new HashSet<string>(
+            favorites.Select(f => f.FileName),
+            StringComparer.OrdinalIgnoreCase);
+
+        var toDelete = Directory.Exists(destFolder)
+            ? Directory.GetFiles(destFolder)
+                .Select(f => Path.GetFileName(f)!)
+                .Where(n => !favoriteNames.Contains(n))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+            : [];
+
+        List<string> deleteList = [];
+        if (toDelete.Count > 0)
+        {
+            var confirm = new ExportDeleteConfirmDialog(toDelete) { Owner = this };
+            confirm.ShowDialog();
+            if (confirm.Choice == ExportDeleteChoice.Cancel) return;
+            if (confirm.Choice == ExportDeleteChoice.DeleteAndExport)
+                deleteList = toDelete;
+        }
+
+        new ExportProgressDialog(favorites, destFolder, deleteList) { Owner = this }.ShowDialog();
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) =>
