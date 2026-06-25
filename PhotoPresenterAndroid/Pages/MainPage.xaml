@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="PhotoPresenterAndroid.Pages.MainPage"
+    BackgroundColor="{StaticResource AppBackground}"
+    Title="Photo Presenter">
+
+    <VerticalStackLayout
+        Spacing="24"
+        Padding="40,60,40,40"
+        VerticalOptions="Center">
+
+        <!-- App title -->
+        <Label
+            Text="Photo Presenter"
+            FontSize="32"
+            FontAttributes="Bold"
+            TextColor="{StaticResource PrimaryText}"
+            HorizontalTextAlignment="Center" />
+
+        <Label
+            Text="Select the folder you copied from your PC to begin."
+            FontSize="15"
+            TextColor="{StaticResource SecondaryText}"
+            HorizontalTextAlignment="Center" />
+
+        <!-- Permission warning (hidden until needed) -->
+        <Border
+            x:Name="PermissionBanner"
+            IsVisible="False"
+            BackgroundColor="#CC5500"
+            Padding="12,8"
+            StrokeShape="RoundRectangle 6">
+            <Label
+                Text="'All files access' permission is required. Tap Grant to open settings."
+                TextColor="White"
+                FontSize="13"
+                HorizontalTextAlignment="Center" />
+        </Border>
+
+        <!-- Selected folder display -->
+        <Border
+            BackgroundColor="{StaticResource InputBackground}"
+            Padding="12,10"
+            StrokeShape="RoundRectangle 8"
+            Stroke="{StaticResource BorderColor}">
+            <VerticalStackLayout Spacing="4">
+                <Label
+                    Text="Selected folder:"
+                    FontSize="12"
+                    TextColor="{StaticResource SecondaryText}" />
+                <Label
+                    x:Name="FolderPathLabel"
+                    Text="No folder selected"
+                    FontSize="13"
+                    TextColor="{StaticResource PrimaryText}"
+                    LineBreakMode="MiddleTruncation" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- Action buttons -->
+        <Button
+            x:Name="SelectFolderButton"
+            Text="Select Folder…"
+            Clicked="SelectFolder_Clicked"
+            BackgroundColor="{StaticResource AccentColor}"
+            TextColor="White"
+            FontSize="16"
+            CornerRadius="8"
+            HeightRequest="50" />
+
+        <Button
+            x:Name="GrantPermissionButton"
+            Text="Grant Permission"
+            IsVisible="False"
+            Clicked="GrantPermission_Clicked"
+            BackgroundColor="#CC5500"
+            TextColor="White"
+            FontSize="15"
+            CornerRadius="8"
+            HeightRequest="46" />
+
+        <Button
+            x:Name="OpenPresentationButton"
+            Text="Open Presentation ▶"
+            IsEnabled="False"
+            Clicked="OpenPresentation_Clicked"
+            BackgroundColor="{StaticResource AccentColor}"
+            TextColor="White"
+            FontSize="16"
+            FontAttributes="Bold"
+            CornerRadius="8"
+            HeightRequest="54" />
+
+        <!-- Status message -->
+        <Label
+            x:Name="StatusLabel"
+            Text=""
+            FontSize="13"
+            TextColor="{StaticResource SecondaryText}"
+            HorizontalTextAlignment="Center" />
+
+        <!-- Instructions -->
+        <Label
+            Text="Connect your phone to a PC via USB, copy the exported folder, then select it here."
+            FontSize="12"
+            TextColor="{StaticResource SecondaryText}"
+            HorizontalTextAlignment="Center"
+            Margin="0,8,0,0" />
+
+    </VerticalStackLayout>
+</ContentPage>

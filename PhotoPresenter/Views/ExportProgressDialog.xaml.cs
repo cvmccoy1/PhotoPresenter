@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Windows;
+using PhotoPresenter.Models;
 using PhotoPresenter.ViewModels;
 
 namespace PhotoPresenter.Views;
@@ -67,6 +69,20 @@ public partial class ExportProgressDialog : Window
             ExportProgressBar.Value = done * 100.0 / totalSteps;
             CountText.Text = $"{done} of {totalSteps}";
         }
+
+        // Phase 3: write manifest
+        HeadingText.Text = "Writing manifest…";
+        var manifest = new PresentationManifest
+        {
+            Items = _favorites
+                .Select(f => new PresentationManifestItem(
+                    f.FileName,
+                    string.IsNullOrEmpty(f.Caption) ? null : f.Caption))
+                .ToList()
+        };
+        string json = JsonSerializer.Serialize(manifest,
+            new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(Path.Combine(_destFolder, "_presentation.json"), json);
 
         HeadingText.Text = "Export complete.";
         StatusText.Text = "";

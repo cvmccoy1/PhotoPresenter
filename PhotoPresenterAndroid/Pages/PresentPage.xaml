@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Class="PhotoPresenterAndroid.Pages.PresentPage"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="Black">
+
+    <Grid x:Name="RootGrid">
+
+        <!-- Photo display -->
+        <Image
+            x:Name="PhotoImage"
+            Aspect="AspectFit"
+            IsVisible="False" />
+
+        <!-- Video player -->
+        <toolkit:MediaElement
+            x:Name="VideoPlayer"
+            IsVisible="False"
+            ShouldShowPlaybackControls="True"
+            ShouldLoopPlayback="False"
+            MediaEnded="VideoPlayer_MediaEnded" />
+
+        <!-- Caption overlay (bottom) -->
+        <Border
+            x:Name="CaptionBorder"
+            VerticalOptions="End"
+            IsVisible="False"
+            BackgroundColor="#AA000000"
+            Padding="20,12"
+            StrokeThickness="0">
+            <Label
+                x:Name="CaptionLabel"
+                TextColor="White"
+                HorizontalTextAlignment="Center"
+                FontSize="16"
+                LineBreakMode="WordWrap" />
+        </Border>
+
+        <!-- Counter (top-right) -->
+        <Label
+            x:Name="CounterLabel"
+            TextColor="White"
+            Opacity="0.75"
+            FontSize="14"
+            VerticalOptions="Start"
+            HorizontalOptions="End"
+            Margin="0,52,16,0"
+            Shadow="{Shadow Brush=Black, Offset='1,1', Radius=3}" />
+
+        <!-- Autoplay toggle (top-left) -->
+        <Button
+            x:Name="AutoplayButton"
+            Text="Auto ▶"
+            FontSize="13"
+            BackgroundColor="#88000000"
+            TextColor="White"
+            BorderWidth="0"
+            CornerRadius="6"
+            VerticalOptions="Start"
+            HorizontalOptions="Start"
+            Margin="16,48,0,0"
+            Padding="10,6"
+            Clicked="AutoplayButton_Clicked" />
+
+        <!-- Back button (top-left, below autoplay) -->
+        <Button
+            x:Name="BackButton"
+            Text="← Back"
+            FontSize="13"
+            BackgroundColor="#88000000"
+            TextColor="White"
+            BorderWidth="0"
+            CornerRadius="6"
+            VerticalOptions="Start"
+            HorizontalOptions="Start"
+            Margin="16,96,0,0"
+            Padding="10,6"
+            Clicked="BackButton_Clicked" />
+
+    </Grid>
+</ContentPage>

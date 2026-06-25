@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenter", "PhotoPres
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenter.Tests", "PhotoPresenter.Tests\PhotoPresenter.Tests.csproj", "{1FBECE63-A619-4490-8257-A3519530BE77}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenterAndroid", "PhotoPresenterAndroid\PhotoPresenterAndroid.csproj", "{82B37DC9-4A67-4D33-9428-47B464819EB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{1FBECE63-A619-4490-8257-A3519530BE77}.Release|x64.Build.0 = Release|Any CPU
 		{1FBECE63-A619-4490-8257-A3519530BE77}.Release|x86.ActiveCfg = Release|Any CPU
 		{1FBECE63-A619-4490-8257-A3519530BE77}.Release|x86.Build.0 = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|x64.Build.0 = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Debug|x86.Build.0 = Debug|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x64.ActiveCfg = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x64.Build.0 = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x86.ActiveCfg = Release|Any CPU
+		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
