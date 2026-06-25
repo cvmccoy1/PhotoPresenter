@@ -9,11 +9,9 @@
 
     <Style TargetType="Label">
         <Setter Property="TextColor" Value="{StaticResource PrimaryText}" />
-        <Setter Property="FontFamily" Value="OpenSansRegular" />
     </Style>
 
     <Style TargetType="Button">
-        <Setter Property="FontFamily" Value="OpenSansRegular" />
         <Setter Property="CornerRadius" Value="8" />
     </Style>
 

@@ -25,14 +25,18 @@ public partial class MainPage : ContentPage
 
     private void CheckPermissions()
     {
-#if ANDROID
-        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+        try
         {
-            bool hasAll = Android.OS.Environment.IsExternalStorageManager;
-            PermissionBanner.IsVisible = !hasAll;
-            GrantPermissionButton.IsVisible = !hasAll;
-        }
+#if ANDROID
+            if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            {
+                bool hasAll = Android.OS.Environment.IsExternalStorageManager;
+                PermissionBanner.IsVisible = !hasAll;
+                GrantPermissionButton.IsVisible = !hasAll;
+            }
 #endif
+        }
+        catch { /* permission check failure is non-fatal */ }
     }
 
     private void ApplyFolder(string path, bool notify = true)
