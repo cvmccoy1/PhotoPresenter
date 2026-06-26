@@ -116,16 +116,28 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
             if (bounds.OutWidth <= 0) return null;
 
             // Decode at a power-of-two fraction of original size.
-            using var bitmap = Android.Graphics.BitmapFactory.DecodeFile(path,
+            var decoded = Android.Graphics.BitmapFactory.DecodeFile(path,
                 new Android.Graphics.BitmapFactory.Options
                 {
                     InSampleSize = CalculateInSampleSize(bounds.OutWidth, targetWidth)
                 });
-            if (bitmap == null) return null;
+            if (decoded == null) return null;
 
-            using var stream = new MemoryStream();
-            bitmap.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 80, stream);
-            return stream.ToArray();
+            // BitmapFactory does not auto-apply EXIF orientation; fix it manually.
+            // HEIC/HEIF files from phone cameras almost always carry an orientation tag.
+            var rotated = ApplyExifOrientation(decoded, path);
+            var toCompress = rotated ?? decoded;
+            try
+            {
+                using var stream = new MemoryStream();
+                toCompress.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 80, stream);
+                return stream.ToArray();
+            }
+            finally
+            {
+                decoded.Dispose();
+                rotated?.Dispose();
+            }
         }
         catch { return null; }
 #else
@@ -141,6 +153,38 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
         return s;
     }
 
+#if ANDROID
+    // Returns a rotation-corrected copy of the bitmap, or null if no rotation is needed.
+    // Handles all 8 EXIF orientation values including mirror variants.
+    private static Android.Graphics.Bitmap? ApplyExifOrientation(
+        Android.Graphics.Bitmap source, string path)
+    {
+        try
+        {
+            using var exif = new Android.Media.ExifInterface(path);
+            int orientation = exif.GetAttributeInt(
+                Android.Media.ExifInterface.TagOrientation, 1);
+            if (orientation <= 1) return null;
+
+            using var matrix = new Android.Graphics.Matrix();
+            switch (orientation)
+            {
+                case 2: matrix.SetScale(-1f,  1f); break;                        // flip H
+                case 3: matrix.SetRotate(180f); break;
+                case 4: matrix.SetScale( 1f, -1f); break;                        // flip V
+                case 5: matrix.SetRotate(270f); matrix.PostScale(-1f, 1f); break; // transpose
+                case 6: matrix.SetRotate(90f);  break;
+                case 7: matrix.SetRotate(90f);  matrix.PostScale(-1f, 1f); break; // transverse
+                case 8: matrix.SetRotate(270f); break;
+                default: return null;
+            }
+            return Android.Graphics.Bitmap.CreateBitmap(
+                source, 0, 0, source.Width, source.Height, matrix, true);
+        }
+        catch { return null; }
+    }
+#endif
+
     private static byte[]? ExtractVideoThumbnailBytes(string path)
     {
 #if ANDROID
@@ -148,18 +192,52 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
         {
             using var retriever = new Android.Media.MediaMetadataRetriever();
             retriever.SetDataSource(path);
-            using var bitmap = retriever.GetFrameAtTime(0, Android.Media.Option.ClosestSync);
-            if (bitmap == null) return null;
 
-            using var stream = new MemoryStream();
-            bitmap.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 70, stream);
-            return stream.ToArray();
+            // HEVC-encoded videos (e.g. iPhone MOV) may not have a sync frame at t=0.
+            // Fall back through progressively looser options before giving up.
+            var frame = retriever.GetFrameAtTime(0, Android.Media.Option.ClosestSync)
+                     ?? retriever.GetFrameAtTime(0, Android.Media.Option.Closest)
+                     ?? retriever.GetFrameAtTime(1_000_000, Android.Media.Option.Closest);
+            if (frame == null) return null;
+
+            // Apply video rotation metadata (MediaMetadataRetriever does not auto-rotate frames).
+            var rotated = ApplyVideoRotation(frame, retriever);
+            var toCompress = rotated ?? frame;
+            try
+            {
+                using var stream = new MemoryStream();
+                toCompress.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 70, stream);
+                return stream.ToArray();
+            }
+            finally
+            {
+                frame.Dispose();
+                rotated?.Dispose();
+            }
         }
         catch { return null; }
 #else
         return null;
 #endif
     }
+
+#if ANDROID
+    private static Android.Graphics.Bitmap? ApplyVideoRotation(
+        Android.Graphics.Bitmap source, Android.Media.MediaMetadataRetriever retriever)
+    {
+        try
+        {
+            var rotStr = retriever.ExtractMetadata(Android.Media.MetadataKey.VideoRotation);
+            if (!int.TryParse(rotStr, out int degrees) || degrees == 0) return null;
+
+            using var matrix = new Android.Graphics.Matrix();
+            matrix.SetRotate(degrees);
+            return Android.Graphics.Bitmap.CreateBitmap(
+                source, 0, 0, source.Width, source.Height, matrix, true);
+        }
+        catch { return null; }
+    }
+#endif
 
     private void ScrollToCurrentItem()
     {
