@@ -31,6 +31,13 @@
             ShouldShowPlaybackControls="True"
             MediaEnded="VideoPlayer_MediaEnded" />
 
+        <!-- Gesture capture overlay — sits above media, below buttons.
+             Opacity="0.01" keeps it invisible while ensuring Android hit-tests it (alpha>0). -->
+        <BoxView
+            x:Name="GestureOverlay"
+            Color="Black"
+            Opacity="0.01" />
+
         <!-- Caption overlay (bottom) -->
         <Border
             x:Name="CaptionBorder"

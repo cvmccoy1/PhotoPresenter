@@ -94,23 +94,18 @@ public partial class MainPage : ContentPage
         try
         {
             StatusLabel.Text = "Loading…";
-            Android.Util.Log.Debug("PP_DIAG", $"OpenPresentation: folder={_folderPath}");
             var items = await ManifestService.LoadAsync(_folderPath);
-            Android.Util.Log.Debug("PP_DIAG", $"OpenPresentation: items={items.Count}");
             if (items.Count == 0)
             {
                 StatusLabel.Text = "No presentable items found. Check that the folder contains exported files.";
                 return;
             }
             StatusLabel.Text = "";
-            Android.Util.Log.Debug("PP_DIAG", "OpenPresentation: calling GoToAsync");
             await Shell.Current.GoToAsync(nameof(PresentPage),
                 new Dictionary<string, object> { ["Items"] = items });
-            Android.Util.Log.Debug("PP_DIAG", "OpenPresentation: GoToAsync returned");
         }
         catch (Exception ex)
         {
-            Android.Util.Log.Error("PP_DIAG", $"OpenPresentation EXCEPTION: {ex}");
             StatusLabel.Text = $"Error: {ex.Message}";
         }
     }
