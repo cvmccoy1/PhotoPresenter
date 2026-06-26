@@ -50,7 +50,7 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
         {
             BuildThumbnailItems();
             _itemsLoaded = true;
-            _ = LoadVideoThumbnailsAsync();
+            _ = LoadAllThumbnailsAsync();
         }
 
         ScrollToCurrentItem();
@@ -60,33 +60,32 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
     {
         _thumbnailItems.Clear();
         for (int i = 0; i < _items.Count; i++)
-        {
-            var item = _items[i];
-            // Photos get their ImageSource immediately (MAUI loads lazily on display).
-            // Videos start with null and are filled in by the background task.
-            var thumb = item.IsVideo ? null : ImageSource.FromFile(item.FullPath);
-            _thumbnailItems.Add(new ThumbnailItem(item, i + 1, thumb));
-        }
+            _thumbnailItems.Add(new ThumbnailItem(_items[i], i + 1));
         ThumbnailGrid.ItemsSource = _thumbnailItems;
     }
 
-    private async Task LoadVideoThumbnailsAsync()
+    // Pre-decodes every thumbnail (photo and video) to display size and stores
+    // the result as JPEG bytes in ThumbnailItem. On scroll-back, MAUI reads from
+    // the in-memory MemoryStream instead of re-reading from disk at full resolution.
+    private async Task LoadAllThumbnailsAsync()
     {
-        var videoItems = _thumbnailItems.Where(t => t.IsVideo).ToList();
-        if (videoItems.Count == 0) return;
-
         VideoLoadIndicator.IsVisible = true;
         VideoLoadIndicator.IsRunning = true;
 
-        var semaphore = new SemaphoreSlim(2, 2);
-        var tasks = videoItems.Select(async t =>
+        int targetPx = GetThumbnailTargetWidth();
+        var semaphore = new SemaphoreSlim(4, 4);
+
+        var tasks = _thumbnailItems.Select(async t =>
         {
             await semaphore.WaitAsync();
             try
             {
-                var src = await Task.Run(() => ExtractVideoThumbnail(t.Item.FullPath));
-                if (src != null)
-                    t.Thumbnail = src;
+                var bytes = await Task.Run(() =>
+                    t.IsVideo
+                        ? ExtractVideoThumbnailBytes(t.Item.FullPath)
+                        : ExtractPhotoThumbnailBytes(t.Item.FullPath, targetPx));
+                if (bytes != null)
+                    t.SetThumbnailBytes(bytes);
             }
             finally { semaphore.Release(); }
         });
@@ -96,7 +95,53 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
         VideoLoadIndicator.IsVisible = false;
     }
 
-    private static ImageSource? ExtractVideoThumbnail(string path)
+    private static int GetThumbnailTargetWidth()
+    {
+#if ANDROID
+        var metrics = Android.App.Application.Context.Resources?.DisplayMetrics;
+        if (metrics != null)
+            return metrics.WidthPixels / 3;
+#endif
+        return 300;
+    }
+
+    private static byte[]? ExtractPhotoThumbnailBytes(string path, int targetWidth)
+    {
+#if ANDROID
+        try
+        {
+            // First pass: get image dimensions without decoding any pixels.
+            var bounds = new Android.Graphics.BitmapFactory.Options { InJustDecodeBounds = true };
+            Android.Graphics.BitmapFactory.DecodeFile(path, bounds);
+            if (bounds.OutWidth <= 0) return null;
+
+            // Decode at a power-of-two fraction of original size.
+            using var bitmap = Android.Graphics.BitmapFactory.DecodeFile(path,
+                new Android.Graphics.BitmapFactory.Options
+                {
+                    InSampleSize = CalculateInSampleSize(bounds.OutWidth, targetWidth)
+                });
+            if (bitmap == null) return null;
+
+            using var stream = new MemoryStream();
+            bitmap.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 80, stream);
+            return stream.ToArray();
+        }
+        catch { return null; }
+#else
+        return null;
+#endif
+    }
+
+    private static int CalculateInSampleSize(int sourceWidth, int targetWidth)
+    {
+        int s = 1;
+        while (sourceWidth / (s * 2) >= targetWidth)
+            s *= 2;
+        return s;
+    }
+
+    private static byte[]? ExtractVideoThumbnailBytes(string path)
     {
 #if ANDROID
         try
@@ -108,8 +153,7 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
 
             using var stream = new MemoryStream();
             bitmap.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 70, stream);
-            var bytes = stream.ToArray();
-            return ImageSource.FromStream(() => new MemoryStream(bytes));
+            return stream.ToArray();
         }
         catch { return null; }
 #else
@@ -144,12 +188,12 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
     }
 
     // ── ThumbnailItem ────────────────────────────────────────────────────────
-    // Wraps a MediaItem with its 1-based display number and a lazily-loaded
-    // thumbnail ImageSource. INotifyPropertyChanged lets the CollectionView
-    // update live when a video frame arrives from the background task.
+    // Stores decoded thumbnail as JPEG bytes so that scroll-back reads from
+    // memory (MemoryStream) rather than re-decoding the full-resolution file.
 
     private sealed class ThumbnailItem : INotifyPropertyChanged
     {
+        private byte[]? _bytes;
         private ImageSource? _thumbnail;
 
         public MediaItem Item { get; }
@@ -159,20 +203,28 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
         public ImageSource? Thumbnail
         {
             get => _thumbnail;
-            set
+            private set
             {
                 _thumbnail = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
             }
         }
 
+        // Called from the background loading task once bytes are ready.
+        public void SetThumbnailBytes(byte[] bytes)
+        {
+            _bytes = bytes;
+            // Factory closure reads from the same in-memory byte array each time —
+            // no disk I/O on scroll-back even if MAUI re-invokes the factory.
+            Thumbnail = ImageSource.FromStream(() => new MemoryStream(_bytes!));
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public ThumbnailItem(MediaItem item, int number, ImageSource? thumbnail)
+        public ThumbnailItem(MediaItem item, int number)
         {
             Item = item;
             Number = number;
-            _thumbnail = thumbnail;
         }
     }
 }
