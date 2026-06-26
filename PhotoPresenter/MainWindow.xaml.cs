@@ -107,17 +107,27 @@ public partial class MainWindow : Window
     private void ExportFavorites_Click(object sender, RoutedEventArgs e)
     {
         var favorites = _vm.OrganiseVM.GetAllFavorites();
-        var dialog = new OpenFolderDialog { Title = "Select destination folder for exported favorites" };
-        if (dialog.ShowDialog() != true) return;
 
-        string destFolder = dialog.FolderName;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var (destFolder, destShellItem) = Services.ShellFolderPicker.PickFolder(
+            hwnd, "Select destination folder for exported favorites");
 
+        if (destFolder == null && destShellItem == null) return; // cancelled
+
+        if (destShellItem != null)
+        {
+            // MTP destination (phone) — skip delete-non-favorites (can't enumerate MTP easily).
+            new ExportProgressDialog(favorites, destShellItem) { Owner = this }.ShowDialog();
+            return;
+        }
+
+        // Normal filesystem destination — existing behaviour.
         var favoriteNames = new HashSet<string>(
             favorites.Select(f => f.FileName),
             StringComparer.OrdinalIgnoreCase);
 
         var toDelete = Directory.Exists(destFolder)
-            ? Directory.GetFiles(destFolder)
+            ? Directory.GetFiles(destFolder!)
                 .Select(f => Path.GetFileName(f)!)
                 .Where(n => !favoriteNames.Contains(n))
                 .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
@@ -134,7 +144,7 @@ public partial class MainWindow : Window
                 deleteList = toDelete;
         }
 
-        new ExportProgressDialog(favorites, destFolder, deleteList) { Owner = this }.ShowDialog();
+        new ExportProgressDialog(favorites, destFolder!, deleteList) { Owner = this }.ShowDialog();
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) =>
