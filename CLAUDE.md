@@ -5,17 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-# Build
+# Build Windows app
 dotnet build PhotoPresenter/PhotoPresenter.csproj
 
-# Run (debug)
+# Run Windows app (debug)
 dotnet run --project PhotoPresenter/PhotoPresenter.csproj
 
-# Open in Visual Studio 2022
+# Build Android companion app
+dotnet build PhotoPresenterAndroid/PhotoPresenterAndroid.csproj
+
+# Open solution in Visual Studio 2022 (covers both projects)
 start PhotoPresenter.sln
 ```
 
-The project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`. Only NuGet dependency is `CommunityToolkit.Mvvm 8.x`. The `10.0.19041.0` minimum is required for the WinRT `VideoProperties` API used for auto video rotation — do not lower it.
+The Windows project targets `net8.0-windows10.0.19041.0` with `UseWPF=true`; its only NuGet dependency is `CommunityToolkit.Mvvm 8.x`. The `10.0.19041.0` minimum is required for the WinRT `VideoProperties` API used for auto video rotation — do not lower it. The Android project targets `net9.0-android` with `UseMaui=true`, minimum API 34; its key dependencies are `CommunityToolkit.Maui`, `CommunityToolkit.Maui.MediaElement`, and `Xamarin.AndroidX.LocalBroadcastManager` (see the Android companion app section below).
 
 The UTC build date (formatted `MM-dd-yyyy`) is embedded as an `AssemblyMetadataAttribute` with key `"BuildDate"` via a top-level `PropertyGroup` + `ItemGroup` in `.csproj`. These must be at the **top level** (not inside a `<Target>`): `GenerateAssemblyInfo` collects `AssemblyAttribute` items during MSBuild's evaluation phase; items added dynamically inside a target run too late and are ignored. `AboutWindow.xaml.cs` reads the attribute at runtime via `Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()` and displays `"Version X.Y.Z  (built MM-dd-yyyy)"`. No extra packages or generated files are involved.
 
@@ -221,6 +224,39 @@ When `IsFadeEnabled` is true, `PresentView.xaml.cs` begins a 250 ms `DoubleAnima
 **`ExportProgressDialog`** (`Views/ExportProgressDialog.xaml`) is a modal progress window. Its constructor takes `IReadOnlyList<PhotoItemViewModel> favorites`, `string destFolder`, and an optional `IReadOnlyList<string>? toDelete`. `StartExportAsync` runs on `Loaded`: phase 1 deletes each file in `toDelete` (skipping failures silently), phase 2 copies each favorite (skipping if the destination file already exists). A single progress bar spans both phases.
 
 **`ExportDeleteConfirmDialog`** (`Views/ExportDeleteConfirmDialog.xaml`) is shown when the destination folder contains files not in the current favorites set. It lists those filenames in a scrollable `ListBox` and offers three buttons: **Delete & Export** (sets `Choice = DeleteAndExport`), **Export Only** (sets `Choice = ExportOnly`), **Cancel** (sets `Choice = Cancel`). `ExportFavorites_Click` in `MainWindow.xaml.cs` computes `toDelete` via `Directory.GetFiles(destFolder)` filtered by the favorites `HashSet<string>` (case-insensitive), shows the dialog if needed, then opens `ExportProgressDialog` with the appropriate `deleteList`.
+
+After phase 2 completes, `StartExportAsync` writes `_presentation.json` to the destination folder — a `PresentationManifest` (`Models/PresentationManifest.cs`) serialized with `System.Text.Json`. Each item carries a `"file"` key (filename only) and an optional `"caption"` key (omitted when null via `JsonIgnore(WhenWritingNull)`). This manifest is consumed by the Android companion app.
+
+## Android companion app
+
+`PhotoPresenterAndroid/` is a .NET MAUI Android app (`net9.0-android`, API 34+) that presents exported favorites on a phone or tablet.
+
+### Architecture
+
+| Layer | Location | Role |
+|-------|----------|------|
+| Models | `Models/` | `PresentationManifest` / `PresentationManifestItem` (mirrors Windows model, deserialization only); `MediaItem` record `(FullPath, Caption, IsVideo)` |
+| Services | `Services/ManifestService.cs` | Reads `_presentation.json`, checks file existence, filters unsupported video formats (AVI/WMV/MKV), returns `List<MediaItem>` |
+| Pages | `Pages/MainPage` | Folder picker (via `CommunityToolkit.Maui.Storage.FolderPicker`), last-folder persistence via `Preferences`, manifest check, navigation to `PresentPage` |
+| Pages | `Pages/PresentPage` | Fullscreen presenter: `Image` for photos, `MediaElement` for video; gesture handling; autoplay timer |
+
+### Gesture handling
+
+MAUI's `PanGestureRecognizer` and `PinchGestureRecognizer` conflict on Android (two-finger spread is consumed by the pan recognizer before pinch can start). The solution bypasses MAUI's gesture layer and attaches Android's native `ScaleGestureDetector` + `GestureDetector` directly to the native view of a transparent `BoxView` overlay (`GestureOverlay`). The overlay sits above `Image`/`MediaElement` in Z-order (so it intercepts all touch) but below the `Button` controls (so Back/Autoplay remain tappable).
+
+- `ScaleGestureDetector` (`PinchListener`) — handles two-finger pinch; scale clamped [1×, 5×]; `_wasScaling` flag set on `OnScaleBegin` to suppress the spurious fling that `GestureDetector` fires when fingers lift after a pinch
+- `GestureDetector` (`FlingScrollListener`) — `OnScroll` pans when `_scale > 1.05` (converts px→DIPs by dividing by `DisplayMetrics.Density`); `OnFling` navigates next/prev at any zoom level when `velocityX > 300 px/s`; suppressed for one event after a pinch via `_wasScaling`
+
+### Navigation
+
+`AppShell` registers `PresentPage` via `Routing.RegisterRoute`. `MainPage` navigates with `Shell.Current.GoToAsync(nameof(PresentPage), dict)` passing `List<MediaItem>` as `"Items"`. `PresentPage` implements `IQueryAttributable` (guarantees `ApplyQueryAttributes` runs before `OnNavigatedTo`).
+
+### Key packages
+
+- `CommunityToolkit.Maui` — `FolderPicker`
+- `CommunityToolkit.Maui.MediaElement` — ExoPlayer-backed video playback
+- `Xamarin.AndroidX.LocalBroadcastManager` — required transitive dependency of `MediaElement` (not auto-included in debug builds; must be an explicit package reference)
+- `EmbedAssembliesIntoApk=true` in the csproj — bundles managed DLLs in the APK, preventing the "No assemblies found in FastDev directory" crash that occurs when the app is closed and restarted outside of a live-deploy session
 
 ## Tests
 

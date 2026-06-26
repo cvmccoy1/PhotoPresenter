@@ -38,7 +38,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - Click a folder (and optionally an item) before switching to Present mode to start from that point; press **Space**, **F5**, or click **▶ Present** to enter Present mode; when you exit Present mode the last photo or video shown becomes the selected item in Organise mode, so pressing **Space** or **F5** again picks up exactly where you left off
   - **Space** and **F5** are intercepted only when a list item or the window background has focus; if a toolbar button, checkbox, or dropdown has keyboard focus, Space activates that control as normal
 - Tick **Favorites Only** (next to the ▶ Present button) to limit the presentation to favorited items only; the overall counter reflects only the favorites set; the presentation starts from the currently selected item if it is a favorite, or the first favorite otherwise
-- Click **Export Favorites…** in the toolbar to copy all favorited photos and videos to a folder of your choice (flat copy, no subfolders, existing files skipped); if the destination already contains files that are not favorites, a confirmation dialog lists them and offers: **Delete & Export** (removes non-favorites then copies), **Export Only** (copies without deleting), or **Cancel**
+- Click **Export Favorites…** in the toolbar to copy all favorited photos and videos to a folder of your choice (flat copy, no subfolders, existing files skipped); if the destination already contains files that are not favorites, a confirmation dialog lists them and offers: **Delete & Export** (removes non-favorites then copies), **Export Only** (copies without deleting), or **Cancel**; the export also writes a `_presentation.json` manifest (item order + captions) that the Android companion app reads
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
 - Press **?** at any time to open a keyboard shortcuts reference
 - Click **Settings…** in the toolbar to open the Settings window; changes to Theme and Text Size take effect immediately
@@ -74,6 +74,41 @@ A Windows WPF application for presenting family photo and video collections on a
   - Volume slider
 - If a video's audio codec is not supported by the Windows media infrastructure, the video still plays automatically and an amber banner appears at the top of the screen explaining that audio is unavailable; navigating to another item clears the banner
 
+## Android Companion App
+
+`PhotoPresenterAndroid` is a .NET MAUI Android app that presents your exported favorites on a phone or tablet connected to a TV.
+
+### Workflow
+
+1. **Export on PC** — Click **Export Favorites…** and choose a destination folder. The app copies the favorited media and writes a `_presentation.json` manifest.
+2. **Transfer to phone** — Copy the export folder to the Android device via USB.
+3. **Present** — Open Photo Presenter on Android, pick the folder, and tap **Open Presentation**.
+
+### Android app features
+
+- Fullscreen black-background display of photos and videos in manifest order
+- **Swipe left/right** to navigate to the next/previous item (works at any zoom level)
+- **Pinch to zoom** (1×–5×); snaps back to 1× if you end the gesture below 1.1×
+- **Drag to pan** a zoomed photo or video
+- Caption overlay at the bottom of the screen when a caption is set
+- Video playback with ExoPlayer (MP4, MOV, M4V); auto-advances to the next item when the video ends
+- **Auto ▶** button for timed autoplay (5-second interval); pauses automatically on videos
+- Item counter in the top-right corner (e.g. **3 / 47**)
+- Remembers the last folder between sessions
+
+### Android requirements
+
+- Android 14 (API 34) or later
+- .NET MAUI workload (`dotnet workload install maui-android`)
+
+### Building the Android app
+
+```powershell
+dotnet build PhotoPresenterAndroid/PhotoPresenterAndroid.csproj
+```
+
+Or open `PhotoPresenter.sln` in Visual Studio 2022 (requires the **Mobile development with .NET** workload) and deploy to a device or emulator.
+
 ## Requirements
 
 - Windows 10 or 11
@@ -99,6 +134,21 @@ When you reorder subfolders or photos in Organise mode, the order is saved to si
 - `_photoorder.json` in each subfolder — stores photo order and any removed photos
 
 If a sidecar file doesn't exist, folders are shown in alphabetical order and photos in date order. Items not listed in a sidecar (e.g. newly added photos) are appended at the end automatically.
+
+### Presentation manifest
+`_presentation.json` is written to the export folder by **Export Favorites…**. It lists every exported item in order and includes any captions:
+
+```json
+{
+  "version": 1,
+  "items": [
+    { "file": "img001.jpg", "caption": "Summer 2024" },
+    { "file": "clip.mp4" }
+  ]
+}
+```
+
+Items without a caption omit the `"caption"` key entirely. The Android companion app reads this file to know the presentation order and captions; items whose files are missing are silently skipped, and video formats not supported by Android (AVI, WMV, MKV) are filtered out automatically.
 
 ### Captions
 Captions are stored in each subfolder's `_photoorder.json` sidecar under a `captions` key. They are never written to the image files themselves.
@@ -136,11 +186,19 @@ Video playback uses the Windows media infrastructure. Most common formats work o
 ## Project Structure
 
 ```
-PhotoPresenter/
-├── Models/          Pure data models
-├── Services/        File I/O, folder scanning, settings persistence
-├── ViewModels/      MVVM logic (CommunityToolkit.Mvvm)
-└── Views/           XAML UI (MainWindow, OrganiseView, PresentView, dialogs)
+PhotoPresenter/              Windows WPF app
+├── Models/                  Pure data models
+├── Services/                File I/O, folder scanning, settings persistence
+├── ViewModels/              MVVM logic (CommunityToolkit.Mvvm)
+└── Views/                   XAML UI (MainWindow, OrganiseView, PresentView, dialogs)
+
+PhotoPresenterAndroid/       Android companion app (.NET MAUI)
+├── Models/                  PresentationManifest, MediaItem
+├── Services/                ManifestService — reads _presentation.json
+├── Pages/                   MainPage (folder picker), PresentPage (fullscreen viewer)
+└── Platforms/Android/       MainActivity, MainApplication, AndroidManifest.xml
+
+PhotoPresenter.Tests/        xUnit test suite (353+ tests)
 ```
 
-Built with [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet).
+Built with [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) and [CommunityToolkit.Maui](https://github.com/CommunityToolkit/Maui).
