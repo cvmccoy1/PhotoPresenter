@@ -86,10 +86,15 @@ A Windows WPF application for presenting family photo and video collections on a
 
 ### Android app features
 
+- **Browse screen** — a scrollable 3-column thumbnail grid showing all items in presentation order; video tiles show an extracted frame with a play-button overlay and a spinner while frames load; the last-viewed position is highlighted and scrolled into view on return
+- Tap any thumbnail to start the fullscreen presentation from that position; the Back button returns to the Browse screen with the selection restored to the last item shown
+- Last-presented item is remembered between app sessions — reopening the same folder resumes from where you left off
 - Fullscreen black-background display of photos and videos in manifest order
-- **Swipe left/right** to navigate to the next/previous item (works at any zoom level)
-- **Pinch to zoom** (1×–5×); snaps back to 1× if you end the gesture below 1.1×
+- **Swipe left/right** to navigate to the next/previous item (works at any zoom level — a fast swipe always navigates; a slow drag pans)
+- **Pinch to zoom** (1×–5×); snaps back to 1× if you release the gesture below 1.1×
+- **Double-tap** to instantly reset zoom and pan back to 1×
 - **Drag to pan** a zoomed photo or video
+- **Tap** to show or hide the caption for items that have one
 - Caption overlay at the bottom of the screen when a caption is set
 - Video playback with ExoPlayer (MP4, MOV, M4V); auto-advances to the next item when the video ends
 - **Auto ▶** button for timed autoplay (5-second interval); pauses automatically on videos
@@ -195,7 +200,7 @@ PhotoPresenter/              Windows WPF app
 PhotoPresenterAndroid/       Android companion app (.NET MAUI)
 ├── Models/                  PresentationManifest, MediaItem
 ├── Services/                ManifestService — reads _presentation.json
-├── Pages/                   MainPage (folder picker), PresentPage (fullscreen viewer)
+├── Pages/                   MainPage (folder picker), BrowsePage (thumbnail grid), PresentPage (fullscreen viewer)
 └── Platforms/Android/       MainActivity, MainApplication, AndroidManifest.xml
 
 PhotoPresenter.Tests/        xUnit test suite (353+ tests)

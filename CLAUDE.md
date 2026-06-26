@@ -237,19 +237,34 @@ After phase 2 completes, `StartExportAsync` writes `_presentation.json` to the d
 |-------|----------|------|
 | Models | `Models/` | `PresentationManifest` / `PresentationManifestItem` (mirrors Windows model, deserialization only); `MediaItem` record `(FullPath, Caption, IsVideo)` |
 | Services | `Services/ManifestService.cs` | Reads `_presentation.json`, checks file existence, filters unsupported video formats (AVI/WMV/MKV), returns `List<MediaItem>` |
-| Pages | `Pages/MainPage` | Folder picker (via `CommunityToolkit.Maui.Storage.FolderPicker`), last-folder persistence via `Preferences`, manifest check, navigation to `PresentPage` |
-| Pages | `Pages/PresentPage` | Fullscreen presenter: `Image` for photos, `MediaElement` for video; gesture handling; autoplay timer |
+| Pages | `Pages/MainPage` | Folder picker (via `CommunityToolkit.Maui.Storage.FolderPicker`), last-folder persistence via `Preferences`, manifest check, navigation to `BrowsePage` |
+| Pages | `Pages/BrowsePage` | 3-column thumbnail grid; `ThumbnailItem` private class with `INotifyPropertyChanged` for live video-frame updates; `TapGestureRecognizer` on each tile drives navigation; `ActivityIndicator` spinner while video frames extract via `MediaMetadataRetriever`; session persistence via `Preferences` (last-presented file path) |
+| Pages | `Pages/PresentPage` | Fullscreen presenter: `Image` for photos, `MediaElement` for video; Android-native gesture handling; autoplay timer; passes current index back to `BrowsePage` on back navigation |
 
 ### Gesture handling
 
 MAUI's `PanGestureRecognizer` and `PinchGestureRecognizer` conflict on Android (two-finger spread is consumed by the pan recognizer before pinch can start). The solution bypasses MAUI's gesture layer and attaches Android's native `ScaleGestureDetector` + `GestureDetector` directly to the native view of a transparent `BoxView` overlay (`GestureOverlay`). The overlay sits above `Image`/`MediaElement` in Z-order (so it intercepts all touch) but below the `Button` controls (so Back/Autoplay remain tappable).
 
 - `ScaleGestureDetector` (`PinchListener`) — handles two-finger pinch; scale clamped [1×, 5×]; `_wasScaling` flag set on `OnScaleBegin` to suppress the spurious fling that `GestureDetector` fires when fingers lift after a pinch
-- `GestureDetector` (`FlingScrollListener`) — `OnScroll` pans when `_scale > 1.05` (converts px→DIPs by dividing by `DisplayMetrics.Density`); `OnFling` navigates next/prev at any zoom level when `velocityX > 300 px/s`; suppressed for one event after a pinch via `_wasScaling`
+- `GestureDetector` (`FlingScrollListener`) — implements both `IOnGestureListener` and `IOnDoubleTapListener`; wired with `_gestureDetector.SetOnDoubleTapListener(flingListener)` so double-tap events reach the same instance:
+  - `OnScroll` — pans when `_scale > 1.05` (converts px→DIPs by dividing by `DisplayMetrics.Density`)
+  - `OnFling` — navigates next/prev at any zoom level when `|velocityX| > 300 px/s`; suppressed for one event after a pinch via `_wasScaling`
+  - `OnDoubleTap` — resets zoom and pan to 1× via `ResetZoomPan()`
+  - `OnSingleTapConfirmed` — toggles `CaptionBorder.IsVisible` for items that have a caption (fires ~300 ms after tap so Android can rule out a double-tap first)
 
 ### Navigation
 
-`AppShell` registers `PresentPage` via `Routing.RegisterRoute`. `MainPage` navigates with `Shell.Current.GoToAsync(nameof(PresentPage), dict)` passing `List<MediaItem>` as `"Items"`. `PresentPage` implements `IQueryAttributable` (guarantees `ApplyQueryAttributes` runs before `OnNavigatedTo`).
+`AppShell` registers both `BrowsePage` and `PresentPage` via `Routing.RegisterRoute`. Navigation flow:
+
+```
+MainPage ──[Open Presentation]──▶ BrowsePage ──[tap thumbnail]──▶ PresentPage
+                                       ▲                                │
+                                       └──────────[Back]────────────────┘
+```
+
+`MainPage` navigates to `BrowsePage` passing `List<MediaItem>` as `"Items"`. `BrowsePage` navigates to `PresentPage` passing `"Items"` + `"StartIndex"` (int, 0-based). `PresentPage.BackButton_Clicked` uses `GoToAsync("..", {"LastIndex": _index})` — MAUI Shell calls `IQueryAttributable.ApplyQueryAttributes` on the revealed `BrowsePage` with these params, updating `_index` and re-scrolling to the correct tile. All three pages implement `IQueryAttributable`.
+
+`BrowsePage` session persistence: on forward navigation from `MainPage`, it reads `Preferences.Default.Get("LastPresentedFile", "")` and finds the matching index in the item list; the `"last item" → restart` rule (if `idx == items.Count - 1`, treat as finished and start from 0) prevents the browse screen from always highlighting the very last item after a completed presentation. `PresentPage.ShowItem` writes the current file path to `Preferences` on every navigation.
 
 ### Key packages
 
