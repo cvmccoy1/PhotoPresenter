@@ -238,7 +238,7 @@ After phase 2 completes, `StartExportAsync` writes `_presentation.json` to the d
 | Models | `Models/` | `PresentationManifest` / `PresentationManifestItem` (mirrors Windows model, deserialization only); `MediaItem` record `(FullPath, Caption, IsVideo)` |
 | Services | `Services/ManifestService.cs` | Reads `_presentation.json`, checks file existence, filters unsupported video formats (AVI/WMV/MKV), returns `List<MediaItem>` |
 | Pages | `Pages/MainPage` | Folder picker (via `CommunityToolkit.Maui.Storage.FolderPicker`), last-folder persistence via `Preferences`, manifest check, navigation to `BrowsePage` |
-| Pages | `Pages/BrowsePage` | 3-column thumbnail grid; `ThumbnailItem` private class with `INotifyPropertyChanged` for live video-frame updates; `TapGestureRecognizer` on each tile drives navigation; `ActivityIndicator` spinner while video frames extract via `MediaMetadataRetriever`; session persistence via `Preferences` (last-presented file path) |
+| Pages | `Pages/BrowsePage` | 3-column thumbnail grid; `ThumbnailItem` private class with `INotifyPropertyChanged` for live thumbnail updates; `TapGestureRecognizer` on each tile drives navigation; `ActivityIndicator` spinner while thumbnails load; session persistence via `Preferences` (last-presented file path); in-memory thumbnail cache eliminates scroll-back reloads (see below) |
 | Pages | `Pages/PresentPage` | Fullscreen presenter: `Image` for photos, `MediaElement` for video; Android-native gesture handling; autoplay timer; passes current index back to `BrowsePage` on back navigation |
 
 ### Gesture handling
@@ -265,6 +265,16 @@ MainPage ──[Open Presentation]──▶ BrowsePage ──[tap thumbnail]─�
 `MainPage` navigates to `BrowsePage` passing `List<MediaItem>` as `"Items"`. `BrowsePage` navigates to `PresentPage` passing `"Items"` + `"StartIndex"` (int, 0-based). `PresentPage.BackButton_Clicked` uses `GoToAsync("..", {"LastIndex": _index})` — MAUI Shell calls `IQueryAttributable.ApplyQueryAttributes` on the revealed `BrowsePage` with these params, updating `_index` and re-scrolling to the correct tile. All three pages implement `IQueryAttributable`.
 
 `BrowsePage` session persistence: on forward navigation from `MainPage`, it reads `Preferences.Default.Get("LastPresentedFile", "")` and finds the matching index in the item list; the `"last item" → restart` rule (if `idx == items.Count - 1`, treat as finished and start from 0) prevents the browse screen from always highlighting the very last item after a completed presentation. `PresentPage.ShowItem` writes the current file path to `Preferences` on every navigation.
+
+### Browse thumbnail caching
+
+`CollectionView` virtualizes off-screen items — when MAUI recycles a cell, it re-requests the image from the `ImageSource`. `ImageSource.FromFile(fullPath)` causes Glide to re-decode the full-resolution photo (potentially 10+ MB) each time a tile scrolls back into view, producing visible reload flicker.
+
+The fix: `LoadAllThumbnailsAsync` pre-decodes every thumbnail to display size on background threads and stores the result as a `byte[]` inside `ThumbnailItem`. `SetThumbnailBytes(byte[])` creates `ImageSource.FromStream(() => new MemoryStream(_bytes))` once and stores it. On scroll-back the stream factory runs again, but only reads from the existing in-memory `byte[]` — no disk I/O, no full-resolution decode.
+
+Photo decoding uses `BitmapFactory` with a two-pass approach: first `InJustDecodeBounds = true` to read dimensions without decoding pixels, then a second decode with `InSampleSize` set to the largest power-of-two that keeps the output at or above the target width (`DisplayMetrics.WidthPixels / 3`). Video thumbnails use `MediaMetadataRetriever.GetFrameAtTime`. Both are compressed to JPEG at 70–80% quality before storage. A `SemaphoreSlim(4)` caps concurrent workers; tiles populate progressively as each worker completes.
+
+Memory cost is approximately 30–60 KB per item (JPEG bytes) — about 5 MB for 100 items, well within the budget of a modern phone.
 
 ### Key packages
 
