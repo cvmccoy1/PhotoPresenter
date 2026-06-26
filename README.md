@@ -38,7 +38,10 @@ A Windows WPF application for presenting family photo and video collections on a
 - Click a folder (and optionally an item) before switching to Present mode to start from that point; press **Space**, **F5**, or click **▶ Present** to enter Present mode; when you exit Present mode the last photo or video shown becomes the selected item in Organise mode, so pressing **Space** or **F5** again picks up exactly where you left off
   - **Space** and **F5** are intercepted only when a list item or the window background has focus; if a toolbar button, checkbox, or dropdown has keyboard focus, Space activates that control as normal
 - Tick **Favorites Only** (next to the ▶ Present button) to limit the presentation to favorited items only; the overall counter reflects only the favorites set; the presentation starts from the currently selected item if it is a favorite, or the first favorite otherwise
-- Click **Export Favorites…** in the toolbar to copy all favorited photos and videos to a folder of your choice (flat copy, no subfolders, existing files skipped); if the destination already contains files that are not favorites, a confirmation dialog lists them and offers: **Delete & Export** (removes non-favorites then copies), **Export Only** (copies without deleting), or **Cancel**; the export also writes a `_presentation.json` manifest (item order + captions) that the Android companion app reads
+- Click **Export Favorites…** in the toolbar to mirror-copy all favorited photos and videos to a destination of your choice (flat copy, no subfolders); the destination can be a local PC folder **or an Android phone connected via USB** — the phone appears alongside local drives in the folder picker:
+  - **Mirror copy semantics**: new favorites are copied, files whose size has changed are replaced, files already present with the same size are skipped; the `_presentation.json` manifest (item order + captions) is always refreshed
+  - **PC folder**: if the destination contains files that are not favorites, a confirmation dialog lists them and offers: **Delete & Export** (mirror copy including deletion of non-favorites), **Export Only** (mirror copy without deletion), or **Cancel**
+  - **Phone (MTP)**: non-favorites are automatically removed from the selected phone folder; the progress dialog shows each phase — Scanning, Deleting, Copying, Writing manifest
 - Window size, position, splitter position, selected folder, selected photo/video, both pane scroll positions, Show All checkbox states, and volume are all remembered between sessions
 - Press **?** at any time to open a keyboard shortcuts reference
 - Click **Settings…** in the toolbar to open the Settings window; changes to Theme and Text Size take effect immediately
@@ -80,8 +83,8 @@ A Windows WPF application for presenting family photo and video collections on a
 
 ### Workflow
 
-1. **Export on PC** — Click **Export Favorites…** and choose a destination folder. The app copies the favorited media and writes a `_presentation.json` manifest.
-2. **Transfer to phone** — Copy the export folder to the Android device via USB.
+1. **Export on PC** — Click **Export Favorites…** and choose a destination. Connect the Android phone via USB and select a folder directly on the phone — it appears alongside local drives in the picker. Alternatively, export to a PC folder first. The export is a mirror copy: new items are added, changed items are updated, unchanged items are skipped, and non-favorites are removed.
+2. **Transfer to phone** *(if you exported to a PC folder)* — Copy the export folder to the Android device via USB or other means.
 3. **Present** — Open Photo Presenter on Android, pick the folder, and tap **Open Presentation**.
 
 ### Android app features

@@ -37,7 +37,7 @@ WPF MVVM app with two modes — **Organise** and **Present** — wired via a Dat
 | Layer | Location | Role |
 |-------|----------|------|
 | Models | `Models/` | Pure data: `PhotoFolder`, `PhotoItem`, JSON sidecar DTOs |
-| Services | `Services/` | `PhotoLibraryService` — scan folders, apply/save sidecar ordering; `UserSettings` — persist last folder, selected folder, window bounds, splitter position, theme, and text size to `%APPDATA%\PhotoPresenter\settings.json`; `ThemeService` — swap color and text-size ResourceDictionaries at runtime |
+| Services | `Services/` | `PhotoLibraryService` — scan folders, apply/save sidecar ordering; `UserSettings` — persist last folder, selected folder, window bounds, splitter position, theme, and text size to `%APPDATA%\PhotoPresenter\settings.json`; `ThemeService` — swap color and text-size ResourceDictionaries at runtime; `ShellInterop` / `ShellFolderPicker` / `ShellFileOperation` — COM/P/Invoke layer for shell-namespace-aware folder picking and file I/O (MTP phone support) |
 | ViewModels | `ViewModels/` | All MVVM state; use `CommunityToolkit.Mvvm` `[ObservableProperty]` / `[RelayCommand]` source generators |
 | Views | `Views/` + `MainWindow.xaml` | XAML layout + code-behind (only D&D event wiring and mouse event forwarding — no business logic) |
 
@@ -221,11 +221,20 @@ When `IsFadeEnabled` is true, `PresentView.xaml.cs` begins a 250 ms `DoubleAnima
 
 ### Export Favorites
 
-**`ExportProgressDialog`** (`Views/ExportProgressDialog.xaml`) is a modal progress window. Its constructor takes `IReadOnlyList<PhotoItemViewModel> favorites`, `string destFolder`, and an optional `IReadOnlyList<string>? toDelete`. `StartExportAsync` runs on `Loaded`: phase 1 deletes each file in `toDelete` (skipping failures silently), phase 2 copies each favorite (skipping if the destination file already exists). A single progress bar spans both phases.
+**`ExportFavorites_Click`** in `MainWindow.xaml.cs` uses `ShellFolderPicker.PickFolder` (a custom `IFileOpenDialog` COM wrapper that omits `FOS_FORCEFILESYSTEM`) so both local PC folders and MTP devices (Android phones connected via USB) appear in the destination picker. Returns `(string? fsPath, IShellItem? shellItem)` — exactly one is non-null. The two destination types follow separate paths:
 
-**`ExportDeleteConfirmDialog`** (`Views/ExportDeleteConfirmDialog.xaml`) is shown when the destination folder contains files not in the current favorites set. It lists those filenames in a scrollable `ListBox` and offers three buttons: **Delete & Export** (sets `Choice = DeleteAndExport`), **Export Only** (sets `Choice = ExportOnly`), **Cancel** (sets `Choice = Cancel`). `ExportFavorites_Click` in `MainWindow.xaml.cs` computes `toDelete` via `Directory.GetFiles(destFolder)` filtered by the favorites `HashSet<string>` (case-insensitive), shows the dialog if needed, then opens `ExportProgressDialog` with the appropriate `deleteList`.
+**Filesystem destination** (PC folder): `ExportFavorites_Click` computes `toDelete` via `Directory.GetFiles(destFolder)` filtered against the favorites set, then shows `ExportDeleteConfirmDialog` if non-favorites exist. The dialog offers **Delete & Export** / **Export Only** / **Cancel**. `ExportProgressDialog(favorites, destFolder, toDelete?)` then runs a mirror copy: phase 1 deletes the `toDelete` list (if the user chose Delete & Export), phase 2 syncs favorites by comparing source vs. destination byte size — matching size → skip, different/missing → `File.Copy(overwrite: true)`, phase 3 writes `_presentation.json`.
 
-After phase 2 completes, `StartExportAsync` writes `_presentation.json` to the destination folder — a `PresentationManifest` (`Models/PresentationManifest.cs`) serialized with `System.Text.Json`. Each item carries a `"file"` key (filename only) and an optional `"caption"` key (omitted when null via `JsonIgnore(WhenWritingNull)`). This manifest is consumed by the Android companion app.
+**MTP destination** (phone via USB): `ExportProgressDialog(favorites, destShellItem)` opens directly (no delete-confirmation dialog — enumeration happens inside the progress dialog to keep the main window responsive). `StartMtpExportAsync` runs four phases: (0) **Scan** the phone folder via `ShellFileOperation.EnumerateFolderContents`, which binds `IShellItem → IShellFolder` via `BindToHandler(BHID_SFObject)`, calls `IShellFolder.EnumObjects → IEnumIDList`, and for each child PIDL calls `SHCreateItemWithParent → IShellItem2.GetDisplayName(SIGDN_PARENTRELATIVEPARSING)` + `IShellItem2.GetUInt64(PKEY_Size)` to build a `{filename → (size, IShellItem)}` dictionary; (1) **Delete** non-favorites via `IFileOperation.DeleteItem` (silently, one operation per file); (2) **Copy** new and size-changed files via `IFileOperation.CopyItem`; (3) **Write manifest** via a temp file + `IFileOperation.MoveItem`. Unchanged files (size matches) are skipped throughout. A summary line in the progress dialog reports how many files were skipped.
+
+**COM infrastructure** (`Services/`):
+- `ShellInterop.cs` — all COM/P/Invoke declarations: `IShellItem` (callable `BindToHandler`), `IShellItem2` (`GetUInt64` for `PKEY_Size`), `IShellFolder`, `IEnumIDList`, `IFileOpenDialog`, `IFileOperation`; `PROPERTYKEY` struct; `SHCreateItemFromParsingName` and `SHCreateItemWithParent` P/Invoke; constants `FOS_FORCEFILESYSTEM`, `BHID_SFObject`, `PKEY_Size`, `SHCONTF_NONFOLDERS`, `SIGDN_PARENTRELATIVEPARSING`
+- `ShellFolderPicker.cs` — `PickFolder(nint ownerHwnd, string title)` → `(string? fsPath, IShellItem? shellItem)`
+- `ShellFileOperation.cs` — `CopyFile`, `WriteTextFile` (temp + MoveItem), `DeleteShellItem`, `EnumerateFolderContents`, `GetDisplayName`
+
+**`ExportDeleteConfirmDialog`** (`Views/ExportDeleteConfirmDialog.xaml`) is shown only for filesystem destinations when non-favorite files exist. It lists those filenames in a scrollable `ListBox` and offers three buttons: **Delete & Export** (`Choice = DeleteAndExport`), **Export Only** (`Choice = ExportOnly`), **Cancel** (`Choice = Cancel`).
+
+`PresentationManifest` (`Models/PresentationManifest.cs`) is serialized with `System.Text.Json`. Each item carries a `"file"` key (filename only) and an optional `"caption"` key (omitted when null via `JsonIgnore(WhenWritingNull)`). This manifest is consumed by the Android companion app.
 
 ## Android companion app
 
@@ -293,7 +302,7 @@ Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` wit
 
 ### Structure
 
-353 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 353`).
+363 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 363`).
 
 ```
 Unit/
