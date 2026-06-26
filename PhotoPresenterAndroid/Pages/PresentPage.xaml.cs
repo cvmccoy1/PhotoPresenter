@@ -18,10 +18,10 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("Items", out var val) && val is List<MediaItem> items)
-        {
             _items = items;
-            _index = 0;
-        }
+        _index = query.TryGetValue("StartIndex", out var si) && si is int startIdx
+            ? Math.Clamp(startIdx, 0, Math.Max(0, _items.Count - 1))
+            : 0;
     }
 
     public PresentPage()
@@ -43,7 +43,7 @@ public partial class PresentPage : ContentPage, IQueryAttributable
         _timer.Interval = TimeSpan.FromSeconds(AutoplayIntervalSeconds);
         _timer.Tick += (_, _) => NextItem();
 
-        ShowItem(0);
+        ShowItem(_index);
     }
 
     protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
@@ -68,6 +68,7 @@ public partial class PresentPage : ContentPage, IQueryAttributable
 
         LoadingLabel.IsVisible = false;
         CounterLabel.Text = $"{_index + 1} / {_items.Count}";
+        Preferences.Default.Set("LastPresentedFile", item.FullPath);
         ResetZoomPan();
 
         if (item.IsVideo)
@@ -138,7 +139,8 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     }
 
     private async void BackButton_Clicked(object sender, EventArgs e)
-        => await Shell.Current.GoToAsync("..");
+        => await Shell.Current.GoToAsync("..",
+               new Dictionary<string, object> { ["LastIndex"] = _index });
 
     // ── Android-native gesture handling ─────────────────────────────────────
     // MAUI's PanGestureRecognizer and PinchGestureRecognizer conflict on
@@ -161,7 +163,9 @@ public partial class PresentPage : ContentPage, IQueryAttributable
         _density = nativeView.Context?.Resources?.DisplayMetrics?.Density ?? 1f;
         var ctx = nativeView.Context!;
         _scaleDetector = new Android.Views.ScaleGestureDetector(ctx, new PinchListener(this));
-        _gestureDetector = new Android.Views.GestureDetector(ctx, new FlingScrollListener(this));
+        var flingListener = new FlingScrollListener(this);
+        _gestureDetector = new Android.Views.GestureDetector(ctx, flingListener);
+        _gestureDetector.SetOnDoubleTapListener(flingListener);
 
         nativeView.Touch += OnNativeTouch;
     }
@@ -211,11 +215,13 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     }
 
     private sealed class FlingScrollListener : Java.Lang.Object,
-        Android.Views.GestureDetector.IOnGestureListener
+        Android.Views.GestureDetector.IOnGestureListener,
+        Android.Views.GestureDetector.IOnDoubleTapListener
     {
         private readonly PresentPage _page;
         internal FlingScrollListener(PresentPage page) => _page = page;
 
+        // ── IOnGestureListener ───────────────────────────────────────────────
         public bool OnDown(Android.Views.MotionEvent e) => true;
         public void OnShowPress(Android.Views.MotionEvent e) { }
         public bool OnSingleTapUp(Android.Views.MotionEvent e) => false;
@@ -248,6 +254,28 @@ public partial class PresentPage : ContentPage, IQueryAttributable
                 return true;
             }
             return false;
+        }
+
+        // ── IOnDoubleTapListener ─────────────────────────────────────────────
+        public bool OnDoubleTap(Android.Views.MotionEvent e)
+        {
+            // Double-tap resets zoom and pan to 1×.
+            MainThread.BeginInvokeOnMainThread(() => _page.ResetZoomPan());
+            return true;
+        }
+
+        public bool OnDoubleTapEvent(Android.Views.MotionEvent e) => false;
+
+        public bool OnSingleTapConfirmed(Android.Views.MotionEvent e)
+        {
+            // Single tap (confirmed not a double-tap) toggles caption visibility.
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (_page._items.Count == 0) return;
+                if (!string.IsNullOrEmpty(_page._items[_page._index].Caption))
+                    _page.CaptionBorder.IsVisible = !_page.CaptionBorder.IsVisible;
+            });
+            return true;
         }
     }
 

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="PhotoPresenterAndroid.Pages.BrowsePage"
+    Title="Browse"
+    BackgroundColor="Black">
+
+    <Grid>
+
+    <CollectionView
+        x:Name="ThumbnailGrid"
+        SelectionMode="Single"
+        BackgroundColor="Black">
+
+        <CollectionView.ItemsLayout>
+            <GridItemsLayout
+                Orientation="Vertical"
+                Span="3"
+                VerticalItemSpacing="3"
+                HorizontalItemSpacing="3" />
+        </CollectionView.ItemsLayout>
+
+        <CollectionView.ItemTemplate>
+            <DataTemplate>
+                <Grid Padding="1">
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnTileTapped" />
+                    </Grid.GestureRecognizers>
+                    <Border
+                        StrokeThickness="3"
+                        Padding="0">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="4" />
+                        </Border.StrokeShape>
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup Name="CommonStates">
+                                <VisualState Name="Normal">
+                                    <VisualState.Setters>
+                                        <Setter Property="Stroke" Value="Transparent" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState Name="Selected">
+                                    <VisualState.Setters>
+                                        <Setter Property="Stroke" Value="#3A7BD5" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Grid>
+                            <!-- Thumbnail image -->
+                            <Image
+                                Source="{Binding Thumbnail}"
+                                Aspect="AspectFill"
+                                HeightRequest="110"
+                                BackgroundColor="#111111" />
+
+                            <!-- Video play icon overlay -->
+                            <Label
+                                Text="▶"
+                                IsVisible="{Binding IsVideo}"
+                                TextColor="White"
+                                FontSize="28"
+                                Opacity="0.85"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+
+                            <!-- Number badge at bottom -->
+                            <Border
+                                VerticalOptions="End"
+                                BackgroundColor="#AA000000"
+                                StrokeThickness="0"
+                                Padding="0,3">
+                                <Label
+                                    Text="{Binding Number}"
+                                    TextColor="White"
+                                    FontSize="11"
+                                    HorizontalTextAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+
+    </CollectionView>
+
+    <!-- Spinner shown while video thumbnails are being extracted -->
+    <ActivityIndicator
+        x:Name="VideoLoadIndicator"
+        Color="White"
+        IsRunning="False"
+        IsVisible="False"
+        VerticalOptions="Start"
+        HorizontalOptions="Center"
+        Margin="0,16,0,0"
+        WidthRequest="36"
+        HeightRequest="36" />
+
+    </Grid>
+
+</ContentPage>

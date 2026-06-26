@@ -101,7 +101,7 @@ public partial class MainPage : ContentPage
                 return;
             }
             StatusLabel.Text = "";
-            await Shell.Current.GoToAsync(nameof(PresentPage),
+            await Shell.Current.GoToAsync(nameof(BrowsePage),
                 new Dictionary<string, object> { ["Items"] = items });
         }
         catch (Exception ex)
