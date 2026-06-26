@@ -1,12 +1,10 @@
-using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Core.Primitives;
 using CommunityToolkit.Maui.Views;
 using PhotoPresenterAndroid.Models;
 
 namespace PhotoPresenterAndroid.Pages;
 
-[QueryProperty(nameof(Items), "Items")]
-public partial class PresentPage : ContentPage
+public partial class PresentPage : ContentPage, IQueryAttributable
 {
     private List<MediaItem> _items = [];
     private int _index;
@@ -14,16 +12,23 @@ public partial class PresentPage : ContentPage
     private double _startScale = 1.0;
     private double _panX;
     private double _panY;
+    private double _lastSwipeTotalX;  // TotalX resets to 0 at Completed on Android
     private bool _isAutoplay;
     private IDispatcherTimer? _timer;
     private const int AutoplayIntervalSeconds = 5;
 
-    public List<MediaItem> Items
+    // IQueryAttributable guarantees this runs before OnNavigatedTo
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        set
+        if (query.TryGetValue("Items", out var val) && val is List<MediaItem> items)
         {
-            _items = value ?? [];
+            _items = items;
             _index = 0;
+            Android.Util.Log.Debug("PP_DIAG", $"PresentPage.ApplyQueryAttributes: {_items.Count} items");
+        }
+        else
+        {
+            Android.Util.Log.Debug("PP_DIAG", "PresentPage.ApplyQueryAttributes: no Items key");
         }
     }
 
@@ -35,8 +40,8 @@ public partial class PresentPage : ContentPage
     protected override void OnNavigatedTo(NavigatedToEventArgs args)
     {
         base.OnNavigatedTo(args);
+        Android.Util.Log.Debug("PP_DIAG", $"PresentPage.OnNavigatedTo: {_items.Count} items");
 
-        // Gesture recognizers wired in code-behind so they share state.
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += OnPanUpdated;
         RootGrid.GestureRecognizers.Add(pan);
@@ -57,10 +62,9 @@ public partial class PresentPage : ContentPage
         base.OnNavigatedFrom(args);
         _timer?.Stop();
         _timer = null;
-        RootGrid.GestureRecognizers.Clear();
-        if (VideoPlayer.CurrentState == MediaElementState.Playing)
-            VideoPlayer.Pause();
+        VideoPlayer.Stop();
         VideoPlayer.Source = null;
+        RootGrid.GestureRecognizers.Clear();
     }
 
     private void ShowItem(int index)
@@ -69,29 +73,29 @@ public partial class PresentPage : ContentPage
         _index = Math.Clamp(index, 0, _items.Count - 1);
         var item = _items[_index];
 
-        CounterLabel.Text = $"{_index + 1} / {_items.Count}";
+        Android.Util.Log.Debug("PP_DIAG", $"ShowItem {_index}: {item.FullPath} isVideo={item.IsVideo}");
 
+        LoadingLabel.IsVisible = false;
+        CounterLabel.Text = $"{_index + 1} / {_items.Count}";
         ResetZoomPan();
 
         if (item.IsVideo)
         {
             _timer?.Stop();
             PhotoImage.IsVisible = false;
+            PhotoImage.Source = null;
             VideoPlayer.Source = MediaSource.FromFile(item.FullPath);
             VideoPlayer.IsVisible = true;
+            VideoPlayer.Play();
         }
         else
         {
+            VideoPlayer.Stop();
             VideoPlayer.Source = null;
             VideoPlayer.IsVisible = false;
             PhotoImage.Source = ImageSource.FromFile(item.FullPath);
             PhotoImage.IsVisible = true;
-
-            if (_isAutoplay)
-            {
-                _timer!.Stop();
-                _timer.Start();
-            }
+            if (_isAutoplay) { _timer!.Stop(); _timer.Start(); }
         }
 
         bool hasCaption = !string.IsNullOrEmpty(item.Caption);
@@ -113,43 +117,28 @@ public partial class PresentPage : ContentPage
 
     private void ResetZoomPan()
     {
-        _scale = 1.0;
-        _panX = 0;
-        _panY = 0;
+        _scale = 1.0; _panX = 0; _panY = 0;
         PhotoImage.Scale = 1;
         PhotoImage.TranslationX = 0;
         PhotoImage.TranslationY = 0;
     }
 
     private void VideoPlayer_MediaEnded(object? sender, EventArgs e)
-    {
-        MainThread.BeginInvokeOnMainThread(NextItem);
-    }
+        => MainThread.BeginInvokeOnMainThread(NextItem);
 
     private void AutoplayButton_Clicked(object sender, EventArgs e)
     {
         _isAutoplay = !_isAutoplay;
         AutoplayButton.Text = _isAutoplay ? "Auto ⏸" : "Auto ▶";
-
-        if (_isAutoplay)
-        {
-            if (!_items[_index].IsVideo)
-                _timer?.Start();
-        }
-        else
-        {
-            _timer?.Stop();
-        }
+        if (_isAutoplay && !_items[_index].IsVideo) _timer?.Start();
+        else _timer?.Stop();
     }
 
     private async void BackButton_Clicked(object sender, EventArgs e)
-    {
-        await Shell.Current.GoToAsync("..");
-    }
+        => await Shell.Current.GoToAsync("..");
 
     private void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        // Panning when zoomed in; swiping to navigate when at 1×.
         if (_scale > 1.05)
         {
             if (e.StatusType == GestureStatus.Running)
@@ -165,13 +154,14 @@ public partial class PresentPage : ContentPage
         }
         else
         {
-            // Swipe navigation (only fires on completion).
-            if (e.StatusType == GestureStatus.Completed)
+            // Track TotalX during Running because Android resets it to 0 at Completed.
+            if (e.StatusType == GestureStatus.Running)
+                _lastSwipeTotalX = e.TotalX;
+            else if (e.StatusType == GestureStatus.Completed)
             {
-                if (e.TotalX < -60)
-                    NextItem();
-                else if (e.TotalX > 60)
-                    PreviousItem();
+                if (_lastSwipeTotalX < -60) NextItem();
+                else if (_lastSwipeTotalX > 60) PreviousItem();
+                _lastSwipeTotalX = 0;
             }
         }
     }
@@ -179,9 +169,7 @@ public partial class PresentPage : ContentPage
     private void OnPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
     {
         if (e.Status == GestureStatus.Started)
-        {
             _startScale = _scale;
-        }
         else if (e.Status == GestureStatus.Running)
         {
             _scale = Math.Clamp(_startScale * e.Scale, 1.0, 5.0);
@@ -189,13 +177,9 @@ public partial class PresentPage : ContentPage
         }
         else if (e.Status == GestureStatus.Completed && _scale < 1.1)
         {
-            // Snap back to fit if barely zoomed in.
-            _scale = 1.0;
-            PhotoImage.Scale = 1.0;
-            _panX = 0;
-            _panY = 0;
-            PhotoImage.TranslationX = 0;
-            PhotoImage.TranslationY = 0;
+            _scale = 1.0; PhotoImage.Scale = 1.0;
+            _panX = 0; _panY = 0;
+            PhotoImage.TranslationX = 0; PhotoImage.TranslationY = 0;
         }
     }
 }

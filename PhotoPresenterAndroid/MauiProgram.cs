@@ -1,4 +1,5 @@
 using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Core;
 
 namespace PhotoPresenterAndroid;
 
@@ -11,7 +12,6 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
             .UseMauiCommunityToolkitMediaElement();
-
         return builder.Build();
     }
 }

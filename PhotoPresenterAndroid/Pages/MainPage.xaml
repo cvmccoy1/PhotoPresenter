@@ -3,7 +3,8 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     x:Class="PhotoPresenterAndroid.Pages.MainPage"
-    BackgroundColor="{StaticResource AppBackground}"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#1A2A5E"
     Title="Photo Presenter">
 
     <VerticalStackLayout
@@ -16,13 +17,13 @@
             Text="Photo Presenter"
             FontSize="32"
             FontAttributes="Bold"
-            TextColor="{StaticResource PrimaryText}"
+            TextColor="White"
             HorizontalTextAlignment="Center" />
 
         <Label
             Text="Select the folder you copied from your PC to begin."
             FontSize="15"
-            TextColor="{StaticResource SecondaryText}"
+            TextColor="#C0C0C0"
             HorizontalTextAlignment="Center" />
 
         <!-- Permission warning (hidden until needed) -->
@@ -30,8 +31,11 @@
             x:Name="PermissionBanner"
             IsVisible="False"
             BackgroundColor="#CC5500"
-            Padding="12,8"
-            StrokeShape="RoundRectangle 6">
+            Stroke="#CC5500"
+            Padding="12,8">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="6" />
+            </Border.StrokeShape>
             <Label
                 Text="'All files access' permission is required. Tap Grant to open settings."
                 TextColor="White"
@@ -41,20 +45,22 @@
 
         <!-- Selected folder display -->
         <Border
-            BackgroundColor="{StaticResource InputBackground}"
-            Padding="12,10"
-            StrokeShape="RoundRectangle 8"
-            Stroke="{StaticResource BorderColor}">
+            BackgroundColor="#1E1E2E"
+            Stroke="#333355"
+            Padding="12,10">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8" />
+            </Border.StrokeShape>
             <VerticalStackLayout Spacing="4">
                 <Label
                     Text="Selected folder:"
                     FontSize="12"
-                    TextColor="{StaticResource SecondaryText}" />
+                    TextColor="#C0C0C0" />
                 <Label
                     x:Name="FolderPathLabel"
                     Text="No folder selected"
                     FontSize="13"
-                    TextColor="{StaticResource PrimaryText}"
+                    TextColor="White"
                     LineBreakMode="MiddleTruncation" />
             </VerticalStackLayout>
         </Border>
@@ -64,7 +70,7 @@
             x:Name="SelectFolderButton"
             Text="Select Folder…"
             Clicked="SelectFolder_Clicked"
-            BackgroundColor="{StaticResource AccentColor}"
+            BackgroundColor="#3A7BD5"
             TextColor="White"
             FontSize="16"
             CornerRadius="8"
@@ -86,7 +92,7 @@
             Text="Open Presentation ▶"
             IsEnabled="False"
             Clicked="OpenPresentation_Clicked"
-            BackgroundColor="{StaticResource AccentColor}"
+            BackgroundColor="#3A7BD5"
             TextColor="White"
             FontSize="16"
             FontAttributes="Bold"
@@ -98,14 +104,14 @@
             x:Name="StatusLabel"
             Text=""
             FontSize="13"
-            TextColor="{StaticResource SecondaryText}"
+            TextColor="#C0C0C0"
             HorizontalTextAlignment="Center" />
 
         <!-- Instructions -->
         <Label
             Text="Connect your phone to a PC via USB, copy the exported folder, then select it here."
             FontSize="12"
-            TextColor="{StaticResource SecondaryText}"
+            TextColor="#C0C0C0"
             HorizontalTextAlignment="Center"
             Margin="0,8,0,0" />
 

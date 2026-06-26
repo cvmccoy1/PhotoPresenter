@@ -9,6 +9,15 @@
 
     <Grid x:Name="RootGrid">
 
+        <!-- Loading placeholder — hidden once ShowItem runs -->
+        <Label
+            x:Name="LoadingLabel"
+            Text="Loading…"
+            TextColor="White"
+            FontSize="20"
+            HorizontalOptions="Center"
+            VerticalOptions="Center" />
+
         <!-- Photo display -->
         <Image
             x:Name="PhotoImage"
@@ -20,7 +29,6 @@
             x:Name="VideoPlayer"
             IsVisible="False"
             ShouldShowPlaybackControls="True"
-            ShouldLoopPlayback="False"
             MediaEnded="VideoPlayer_MediaEnded" />
 
         <!-- Caption overlay (bottom) -->
@@ -47,8 +55,7 @@
             FontSize="14"
             VerticalOptions="Start"
             HorizontalOptions="End"
-            Margin="0,52,16,0"
-            Shadow="{Shadow Brush=Black, Offset='1,1', Radius=3}" />
+            Margin="0,52,16,0" />
 
         <!-- Autoplay toggle (top-left) -->
         <Button
@@ -65,7 +72,7 @@
             Padding="10,6"
             Clicked="AutoplayButton_Clicked" />
 
-        <!-- Back button (top-left, below autoplay) -->
+        <!-- Back button -->
         <Button
             x:Name="BackButton"
             Text="← Back"
