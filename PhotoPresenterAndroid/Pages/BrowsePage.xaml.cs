@@ -119,7 +119,7 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
             var decoded = Android.Graphics.BitmapFactory.DecodeFile(path,
                 new Android.Graphics.BitmapFactory.Options
                 {
-                    InSampleSize = CalculateInSampleSize(bounds.OutWidth, targetWidth)
+                    InSampleSize = BitmapUtils.CalculateInSampleSize(bounds.OutWidth, targetWidth)
                 });
             if (decoded == null) return null;
 
@@ -143,14 +143,6 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
 #else
         return null;
 #endif
-    }
-
-    private static int CalculateInSampleSize(int sourceWidth, int targetWidth)
-    {
-        int s = 1;
-        while (sourceWidth / (s * 2) >= targetWidth)
-            s *= 2;
-        return s;
     }
 
 #if ANDROID
@@ -190,30 +182,21 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
 #if ANDROID
         try
         {
-            using var retriever = new Android.Media.MediaMetadataRetriever();
-            retriever.SetDataSource(path);
+            // Try path-based retriever first, then URI-based (uses content resolver and may
+            // handle Apple QuickTime MOV containers that path-based access misses).
+            // Each attempt internally tries multiple timestamps and sync-frame options.
+            var frame = TryExtractViaRetriever(path, useUri: false)
+                     ?? TryExtractViaRetriever(path, useUri: true)
+                     ?? TryVideoThumbnailUtils(path);
 
-            // HEVC-encoded videos (e.g. iPhone MOV) may not have a sync frame at t=0.
-            // Fall back through progressively looser options before giving up.
-            var frame = retriever.GetFrameAtTime(0, Android.Media.Option.ClosestSync)
-                     ?? retriever.GetFrameAtTime(0, Android.Media.Option.Closest)
-                     ?? retriever.GetFrameAtTime(1_000_000, Android.Media.Option.Closest);
             if (frame == null) return null;
-
-            // Apply video rotation metadata (MediaMetadataRetriever does not auto-rotate frames).
-            var rotated = ApplyVideoRotation(frame, retriever);
-            var toCompress = rotated ?? frame;
             try
             {
                 using var stream = new MemoryStream();
-                toCompress.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 70, stream);
+                frame.Compress(Android.Graphics.Bitmap.CompressFormat.Jpeg!, 70, stream);
                 return stream.ToArray();
             }
-            finally
-            {
-                frame.Dispose();
-                rotated?.Dispose();
-            }
+            finally { frame.Dispose(); }
         }
         catch { return null; }
 #else
@@ -222,18 +205,97 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
     }
 
 #if ANDROID
-    private static Android.Graphics.Bitmap? ApplyVideoRotation(
-        Android.Graphics.Bitmap source, Android.Media.MediaMetadataRetriever retriever)
+    // Tries to extract a rotation-corrected video frame via MediaMetadataRetriever.
+    // Returns null on any failure so the caller can try the next strategy.
+    private static Android.Graphics.Bitmap? TryExtractViaRetriever(string path, bool useUri)
+    {
+        try
+        {
+            using var retriever = new Android.Media.MediaMetadataRetriever();
+            if (useUri)
+                retriever.SetDataSource(
+                    Android.App.Application.Context,
+                    Android.Net.Uri.FromFile(new Java.IO.File(path)));
+            else
+                retriever.SetDataSource(path);
+
+            // HEVC-encoded videos may not have a sync frame at t=0.
+            // -1 = "any time"; NextSync looks forward from t=0 (useful when all
+            // frames have a positive ctts offset making their PTS > 0).
+            var frame = retriever.GetFrameAtTime(-1L, Android.Media.Option.ClosestSync)
+                     ?? retriever.GetFrameAtTime(0, Android.Media.Option.NextSync)
+                     ?? retriever.GetFrameAtTime(0, Android.Media.Option.ClosestSync)
+                     ?? retriever.GetFrameAtTime(0, Android.Media.Option.Closest)
+                     ?? retriever.GetFrameAtTime(1_000_000, Android.Media.Option.Closest)
+                     ?? retriever.GetFrameAtTime(2_000_000, Android.Media.Option.Closest)
+                     ?? retriever.GetFrameAtTime(5_000_000, Android.Media.Option.Closest);
+            if (frame == null) return null;
+
+            // Apply rotation correction while retriever is still in scope.
+            // Android 12+ (API 31) may auto-apply rotation; detect this by comparing
+            // actual frame dimensions against the encoded (pre-rotation) metadata dimensions.
+            var rotated = ApplyVideoRotationIfNeeded(frame, retriever);
+            if (rotated != null) { frame.Dispose(); return rotated; }
+            return frame;
+        }
+        catch { return null; }
+    }
+
+    private static Android.Graphics.Bitmap? TryVideoThumbnailUtils(string path)
+    {
+        // New API (API 29+): applies rotation automatically; good general coverage.
+        try
+        {
+            var bmp = Android.Media.ThumbnailUtils.CreateVideoThumbnail(
+                new Java.IO.File(path),
+                new Android.Util.Size(400, 400),
+                null);
+            if (bmp != null) return bmp;
+        }
+        catch { }
+
+        // Deprecated API: uses a different internal code path that may handle
+        // QuickTime MOV containers (e.g. iPhone HEVC .MOV) when the new API fails.
+        try
+        {
+            // MINI_KIND = 1 in Android.Provider.ThumbnailKind
+            return Android.Media.ThumbnailUtils.CreateVideoThumbnail(
+                path, (Android.Provider.ThumbnailKind)1);
+        }
+        catch { return null; }
+    }
+
+    // Applies video rotation only when getFrameAtTime has NOT already done so.
+    // On API 31+ the system may auto-rotate frames; detect this by comparing the
+    // actual frame dimensions against the encoded (pre-rotation) metadata dimensions.
+    private static Android.Graphics.Bitmap? ApplyVideoRotationIfNeeded(
+        Android.Graphics.Bitmap frame, Android.Media.MediaMetadataRetriever retriever)
     {
         try
         {
             var rotStr = retriever.ExtractMetadata(Android.Media.MetadataKey.VideoRotation);
             if (!int.TryParse(rotStr, out int degrees) || degrees == 0) return null;
 
+            // For 90°/270° rotations we can detect auto-rotation: if the encoded video is
+            // landscape (encW > encH) but the returned frame is already portrait (h > w),
+            // the system applied the rotation and we must not apply it again.
+            if (degrees == 90 || degrees == 270)
+            {
+                var wStr = retriever.ExtractMetadata(Android.Media.MetadataKey.VideoWidth);
+                var hStr = retriever.ExtractMetadata(Android.Media.MetadataKey.VideoHeight);
+                if (int.TryParse(wStr, out int encW) && int.TryParse(hStr, out int encH)
+                    && encW > 0 && encH > 0)
+                {
+                    bool encodedIsLandscape = encW > encH;
+                    bool frameIsPortrait    = frame.Height > frame.Width;
+                    if (encodedIsLandscape == frameIsPortrait) return null; // already rotated
+                }
+            }
+
             using var matrix = new Android.Graphics.Matrix();
             matrix.SetRotate(degrees);
             return Android.Graphics.Bitmap.CreateBitmap(
-                source, 0, 0, source.Width, source.Height, matrix, true);
+                frame, 0, 0, frame.Width, frame.Height, matrix, true);
         }
         catch { return null; }
     }

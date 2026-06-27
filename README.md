@@ -99,7 +99,7 @@ A Windows WPF application for presenting family photo and video collections on a
 - **Drag to pan** a zoomed photo or video
 - **Tap** to show or hide the caption for items that have one
 - Caption overlay at the bottom of the screen when a caption is set
-- Video playback with ExoPlayer (MP4, MOV, M4V); auto-advances to the next item when the video ends
+- Video playback with ExoPlayer (MP4, MOV, M4V); **tap** a playing video to pause it, tap again to resume, tap after it ends to restart from the beginning; auto-advances to the next item when the video ends only if autoplay is active
 - **Auto ▶** button for timed autoplay (5-second interval); pauses automatically on videos
 - Item counter in the top-right corner (e.g. **3 / 47**)
 - Remembers the last folder between sessions
@@ -202,11 +202,12 @@ PhotoPresenter/              Windows WPF app
 
 PhotoPresenterAndroid/       Android companion app (.NET MAUI)
 ├── Models/                  PresentationManifest, MediaItem
-├── Services/                ManifestService — reads _presentation.json
+├── Services/                ManifestService — reads _presentation.json; BitmapUtils — thumbnail downsampling
 ├── Pages/                   MainPage (folder picker), BrowsePage (thumbnail grid), PresentPage (fullscreen viewer)
 └── Platforms/Android/       MainActivity, MainApplication, AndroidManifest.xml
 
-PhotoPresenter.Tests/        xUnit test suite (353+ tests)
+PhotoPresenter.Tests/        xUnit test suite for Windows app (363 tests)
+PhotoPresenterAndroid.Tests/ xUnit test suite for Android app (48 tests, runs on desktop — no device needed)
 ```
 
 Built with [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) and [CommunityToolkit.Maui](https://github.com/CommunityToolkit/Maui).

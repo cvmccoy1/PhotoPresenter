@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!--
+    Compile testable source files directly from the Android project.
+    The Android project targets net9.0-android which a net9.0 test project cannot
+    reference. Linking source files lets us run pure-C# logic (ManifestService,
+    models, BitmapUtils) on the desktop without a device or emulator.
+    Files with #if ANDROID blocks compile cleanly — the conditional sections are
+    simply excluded when ANDROID is not defined.
+  -->
+  <ItemGroup>
+    <Compile Include="..\PhotoPresenterAndroid\Models\MediaItem.cs" />
+    <Compile Include="..\PhotoPresenterAndroid\Models\PresentationManifest.cs" />
+    <Compile Include="..\PhotoPresenterAndroid\Services\ManifestService.cs" />
+    <Compile Include="..\PhotoPresenterAndroid\Services\BitmapUtils.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.9.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

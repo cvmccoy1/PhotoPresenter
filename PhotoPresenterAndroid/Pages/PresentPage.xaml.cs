@@ -12,6 +12,7 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     private double _panX;
     private double _panY;
     private bool _isAutoplay;
+    private bool _videoEnded;
     private IDispatcherTimer? _timer;
     private const int AutoplayIntervalSeconds = 5;
 
@@ -66,6 +67,7 @@ public partial class PresentPage : ContentPage, IQueryAttributable
         _index = Math.Clamp(index, 0, _items.Count - 1);
         var item = _items[_index];
 
+        _videoEnded = false;
         LoadingLabel.IsVisible = false;
         CounterLabel.Text = $"{_index + 1} / {_items.Count}";
         Preferences.Default.Set("LastPresentedFile", item.FullPath);
@@ -128,7 +130,30 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     }
 
     private void VideoPlayer_MediaEnded(object? sender, EventArgs e)
-        => MainThread.BeginInvokeOnMainThread(NextItem);
+    {
+        _videoEnded = true;
+        if (_isAutoplay)
+            MainThread.BeginInvokeOnMainThread(NextItem);
+    }
+
+    // Single-tap on a video: pause if playing, resume if paused, restart if ended.
+    internal async void HandleVideoTap()
+    {
+        if (_videoEnded)
+        {
+            _videoEnded = false;
+            await VideoPlayer.SeekTo(TimeSpan.Zero);
+            VideoPlayer.Play();
+        }
+        else if (VideoPlayer.CurrentState == MediaElementState.Playing)
+        {
+            VideoPlayer.Pause();
+        }
+        else
+        {
+            VideoPlayer.Play();
+        }
+    }
 
     private void AutoplayButton_Clicked(object sender, EventArgs e)
     {
@@ -268,11 +293,13 @@ public partial class PresentPage : ContentPage, IQueryAttributable
 
         public bool OnSingleTapConfirmed(Android.Views.MotionEvent e)
         {
-            // Single tap (confirmed not a double-tap) toggles caption visibility.
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 if (_page._items.Count == 0) return;
-                if (!string.IsNullOrEmpty(_page._items[_page._index].Caption))
+                var current = _page._items[_page._index];
+                if (current.IsVideo)
+                    _page.HandleVideoTap();
+                else if (!string.IsNullOrEmpty(current.Caption))
                     _page.CaptionBorder.IsVisible = !_page.CaptionBorder.IsVisible;
             });
             return true;
@@ -288,6 +315,18 @@ public partial class PresentPage : ContentPage, IQueryAttributable
 
     private void SetupMauiGestures()
     {
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) =>
+        {
+            if (_items.Count == 0) return;
+            var current = _items[_index];
+            if (current.IsVideo)
+                HandleVideoTap();
+            else if (!string.IsNullOrEmpty(current.Caption))
+                CaptionBorder.IsVisible = !CaptionBorder.IsVisible;
+        };
+        GestureOverlay.GestureRecognizers.Add(tap);
+
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += OnPanUpdated;
         GestureOverlay.GestureRecognizers.Add(pan);

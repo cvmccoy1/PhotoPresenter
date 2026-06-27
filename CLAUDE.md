@@ -24,8 +24,10 @@ The UTC build date (formatted `MM-dd-yyyy`) is embedded as an `AssemblyMetadataA
 
 ## Development workflow
 
-- Any new feature or behavior change must come with corresponding test coverage in `PhotoPresenter.Tests/` (see `## Tests` below for structure and conventions).
-- Before considering a change complete, run the full suite — `dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj` — and confirm all tests pass.
+- Any new feature or behavior change must come with corresponding test coverage in the appropriate test project (see `## Tests` below for structure and conventions).
+- Before considering a change complete, run the full suite for the affected project and confirm all tests pass:
+  - Windows app: `dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj`
+  - Android app: `dotnet test PhotoPresenterAndroid.Tests/PhotoPresenterAndroid.Tests.csproj`
 - Before implementing any requested change, ask clarifying questions until at least 99% sure of what is being asked — even if it takes multiple rounds of questions. Only skip this when the request is already fully unambiguous.
 
 ## Architecture
@@ -294,13 +296,15 @@ Memory cost is approximately 30–60 KB per item (JPEG bytes) — about 5 MB for
 
 ## Tests
 
+### Windows app tests
+
 ```powershell
 dotnet test PhotoPresenter.Tests/PhotoPresenter.Tests.csproj
 ```
 
 Test project at `PhotoPresenter.Tests/` targets `net8.0-windows10.0.19041.0` with `UseWPF=true`, `OutputType=Library`. `AssemblyInfo.cs` carries `[InternalsVisibleTo("PhotoPresenter.Tests")]` so all `internal` members are visible to tests.
 
-### Structure
+#### Structure
 
 363 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 363`).
 
@@ -355,11 +359,45 @@ Infrastructure/
 | `ShowStatus(message)` | `OrganiseViewModel.cs` | Status banner tests; also called by `SwitchToPresent` on no-favorites abort |
 | `HandleKeyDown(key, modifiers)` | `MainWindow.xaml.cs` | Key binding dispatch tests without needing real WPF key events |
 
-### Key conventions
+#### Key conventions
 
 - STA thread (`[StaFact]` / `[StaTheory]`) required for any code that creates `BitmapSource`, `TransformedBitmap`, or `BitmapImage`
 - `OrganiseViewModel` tests pass a non-existent path to `LoadAsync` so the `FileSystemWatcher` silently skips initialisation
 - `TempDirectory` is `IDisposable` — use in a `using` block; `TinyJpegBytes` provides a minimal valid JPEG without needing STA
+
+### Android app tests
+
+```powershell
+dotnet test PhotoPresenterAndroid.Tests/PhotoPresenterAndroid.Tests.csproj
+```
+
+Test project at `PhotoPresenterAndroid.Tests/` targets `net9.0` (standard desktop .NET — no emulator or device required). Testable source files are compiled directly into the test project via `<Compile Include="..." />` rather than a project reference, because the Android project targets `net9.0-android` which a `net9.0` project cannot reference. All `#if ANDROID` blocks compile away cleanly when `ANDROID` is not defined.
+
+#### Structure
+
+48 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 48`).
+
+```
+Unit/
+  ManifestServiceTests.cs      — LoadAsync (file filtering, video format support, caption handling,
+                                  case-insensitive extension matching, manifest ordering, skip-missing-files);
+                                  HasManifest (present/absent)
+  PresentationManifestTests.cs — JSON deserialization (empty items, null/present caption, version field);
+                                  serialization (caption omitted when null)
+  BitmapUtilsTests.cs          — CalculateInSampleSize power-of-two downsampling algorithm
+Infrastructure/
+  TempDirectory.cs             — IDisposable temp folder; TinyJpegBytes = minimal valid 1×1 JPEG
+```
+
+#### What is and is not testable
+
+All image/video processing (`ExtractPhotoThumbnailBytes`, `ExtractVideoThumbnailBytes`, `ApplyExifOrientation`) and all gesture handlers (`PinchListener`, `FlingScrollListener`) require Android runtime APIs (`Android.Graphics.*`, `Android.Media.*`, Java interop) and are not testable in a desktop project. Page navigation methods (`ShowItem`, `NextItem`) touch MAUI UI elements and likewise require the MAUI runtime. Only pure C# logic with no MAUI or Android API dependencies is included in the test project.
+
+#### Key conventions
+
+- No STA thread attribute needed — no WPF imaging APIs are used
+- `TempDirectory` is `IDisposable` — use in a `using` block; real files must be created with `CreateFile()` for `File.Exists` checks in `ManifestService` to pass
+- `BitmapUtils.CalculateInSampleSize` is `internal static` in `PhotoPresenterAndroid/Services/BitmapUtils.cs`; it was extracted from `BrowsePage` specifically for testability
 
 ## Global usings
 

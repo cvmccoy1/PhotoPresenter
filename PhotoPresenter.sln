@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenter.Tests", "Pho
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenterAndroid", "PhotoPresenterAndroid\PhotoPresenterAndroid.csproj", "{82B37DC9-4A67-4D33-9428-47B464819EB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoPresenterAndroid.Tests", "PhotoPresenterAndroid.Tests\PhotoPresenterAndroid.Tests.csproj", "{24870C3B-AAC6-4C24-85D7-F5968FE0614F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x64.Build.0 = Release|Any CPU
 		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x86.ActiveCfg = Release|Any CPU
 		{82B37DC9-4A67-4D33-9428-47B464819EB6}.Release|x86.Build.0 = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|x64.Build.0 = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Debug|x86.Build.0 = Debug|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|x64.ActiveCfg = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|x64.Build.0 = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|x86.ActiveCfg = Release|Any CPU
+		{24870C3B-AAC6-4C24-85D7-F5968FE0614F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
