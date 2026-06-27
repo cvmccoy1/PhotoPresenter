@@ -375,29 +375,38 @@ Test project at `PhotoPresenterAndroid.Tests/` targets `net9.0` (standard deskto
 
 #### Structure
 
-48 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 48`).
+98 tests as of the last full run (`dotnet test` output: `Passed! - Failed: 0, Passed: 98`).
 
 ```
 Unit/
   ManifestServiceTests.cs      — LoadAsync (file filtering, video format support, caption handling,
-                                  case-insensitive extension matching, manifest ordering, skip-missing-files);
-                                  HasManifest (present/absent)
+                                  case-insensitive extension matching, manifest ordering, skip-missing-files,
+                                  edge cases: empty caption, filename with spaces, duplicates, newline in caption,
+                                  large manifest); HasManifest (present/absent)
   PresentationManifestTests.cs — JSON deserialization (empty items, null/present caption, version field);
                                   serialization (caption omitted when null)
   BitmapUtilsTests.cs          — CalculateInSampleSize power-of-two downsampling algorithm
+  PresentationUtilsTests.cs    — NextIndex/PreviousIndex (wrap, single-item, empty list);
+                                  ClampIndex (within range, negative, above max, empty);
+                                  ResolveRestoredIndex (mid-list, last item restart, file-not-found, edge cases);
+                                  ClampedScale (multiply, clamp to max/min); ShouldResetZoom (boundary);
+                                  GetFlingDirection (threshold, negative=next, positive=previous);
+                                  GetPanSwipeDirection (threshold, left=next, right=previous);
+                                  GetVideoTapAction (ended, playing, paused)
+  MediaItemTests.cs            — record constructor, null caption, value equality, `with` expression
 Infrastructure/
   TempDirectory.cs             — IDisposable temp folder; TinyJpegBytes = minimal valid 1×1 JPEG
 ```
 
 #### What is and is not testable
 
-All image/video processing (`ExtractPhotoThumbnailBytes`, `ExtractVideoThumbnailBytes`, `ApplyExifOrientation`) and all gesture handlers (`PinchListener`, `FlingScrollListener`) require Android runtime APIs (`Android.Graphics.*`, `Android.Media.*`, Java interop) and are not testable in a desktop project. Page navigation methods (`ShowItem`, `NextItem`) touch MAUI UI elements and likewise require the MAUI runtime. Only pure C# logic with no MAUI or Android API dependencies is included in the test project.
+All image/video processing (`ExtractPhotoThumbnailBytes`, `ExtractVideoThumbnailBytes`, `ApplyExifOrientation`) and all gesture handlers (`PinchListener`, `FlingScrollListener`) require Android runtime APIs (`Android.Graphics.*`, `Android.Media.*`, Java interop) and are not testable in a desktop project. Page navigation methods (`ShowItem`, `NextItem`) touch MAUI UI elements and likewise require the MAUI runtime. Pure C# logic extracted into `PresentationUtils` and `BitmapUtils` (navigation math, zoom clamping, swipe direction, video tap state machine, bitmap downsampling) is fully testable and is included.
 
 #### Key conventions
 
 - No STA thread attribute needed — no WPF imaging APIs are used
 - `TempDirectory` is `IDisposable` — use in a `using` block; real files must be created with `CreateFile()` for `File.Exists` checks in `ManifestService` to pass
-- `BitmapUtils.CalculateInSampleSize` is `internal static` in `PhotoPresenterAndroid/Services/BitmapUtils.cs`; it was extracted from `BrowsePage` specifically for testability
+- `BitmapUtils.CalculateInSampleSize` and `PresentationUtils.*` are `internal static` in `PhotoPresenterAndroid/Services/`; they were extracted from page code specifically for testability
 
 ## Global usings
 

@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui.Core.Primitives;
 using CommunityToolkit.Maui.Views;
 using PhotoPresenterAndroid.Models;
+using PhotoPresenterAndroid.Services;
 
 namespace PhotoPresenterAndroid.Pages;
 
@@ -21,7 +22,7 @@ public partial class PresentPage : ContentPage, IQueryAttributable
         if (query.TryGetValue("Items", out var val) && val is List<MediaItem> items)
             _items = items;
         _index = query.TryGetValue("StartIndex", out var si) && si is int startIdx
-            ? Math.Clamp(startIdx, 0, Math.Max(0, _items.Count - 1))
+            ? PresentationUtils.ClampIndex(startIdx, _items.Count)
             : 0;
     }
 
@@ -99,13 +100,13 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     internal void NextItem()
     {
         if (_items.Count == 0) return;
-        ShowItem((_index + 1) % _items.Count);
+        ShowItem(PresentationUtils.NextIndex(_index, _items.Count));
     }
 
     internal void PreviousItem()
     {
         if (_items.Count == 0) return;
-        ShowItem((_index - 1 + _items.Count) % _items.Count);
+        ShowItem(PresentationUtils.PreviousIndex(_index, _items.Count));
     }
 
     internal void ResetZoomPan()
@@ -139,19 +140,21 @@ public partial class PresentPage : ContentPage, IQueryAttributable
     // Single-tap on a video: pause if playing, resume if paused, restart if ended.
     internal async void HandleVideoTap()
     {
-        if (_videoEnded)
+        var action = PresentationUtils.GetVideoTapAction(
+            _videoEnded, VideoPlayer.CurrentState == MediaElementState.Playing);
+        switch (action)
         {
-            _videoEnded = false;
-            await VideoPlayer.SeekTo(TimeSpan.Zero);
-            VideoPlayer.Play();
-        }
-        else if (VideoPlayer.CurrentState == MediaElementState.Playing)
-        {
-            VideoPlayer.Pause();
-        }
-        else
-        {
-            VideoPlayer.Play();
+            case PresentationUtils.VideoTapAction.Restart:
+                _videoEnded = false;
+                await VideoPlayer.SeekTo(TimeSpan.Zero);
+                VideoPlayer.Play();
+                break;
+            case PresentationUtils.VideoTapAction.Pause:
+                VideoPlayer.Pause();
+                break;
+            default:
+                VideoPlayer.Play();
+                break;
         }
     }
 
@@ -227,14 +230,14 @@ public partial class PresentPage : ContentPage, IQueryAttributable
 
         public bool OnScale(Android.Views.ScaleGestureDetector detector)
         {
-            _page._scale = Math.Clamp(_page._scale * detector.ScaleFactor, 1.0, 5.0);
+            _page._scale = PresentationUtils.ClampedScale(_page._scale, detector.ScaleFactor);
             _page.ApplyZoom(_page._scale);
             return true;
         }
 
         public void OnScaleEnd(Android.Views.ScaleGestureDetector detector)
         {
-            if (_page._scale < 1.1)
+            if (PresentationUtils.ShouldResetZoom(_page._scale))
                 _page.ResetZoomPan();
         }
     }
@@ -272,13 +275,12 @@ public partial class PresentPage : ContentPage, IQueryAttributable
             // Suppress fling that immediately follows a pinch gesture.
             if (_page._wasScaling) { _page._wasScaling = false; return true; }
             if (e1 == null || e2 == null) return false;
-            if (Math.Abs(velocityX) > 300)
+            switch (PresentationUtils.GetFlingDirection(velocityX))
             {
-                if (velocityX < 0) _page.NextItem();
-                else _page.PreviousItem();
-                return true;
+                case PresentationUtils.SwipeDirection.Next:     _page.NextItem();     return true;
+                case PresentationUtils.SwipeDirection.Previous: _page.PreviousItem(); return true;
+                default: return false;
             }
-            return false;
         }
 
         // ── IOnDoubleTapListener ─────────────────────────────────────────────
@@ -357,8 +359,11 @@ public partial class PresentPage : ContentPage, IQueryAttributable
                 _lastSwipeTotalX = e.TotalX;
             else if (e.StatusType == GestureStatus.Completed)
             {
-                if (_lastSwipeTotalX < -60) NextItem();
-                else if (_lastSwipeTotalX > 60) PreviousItem();
+                switch (PresentationUtils.GetPanSwipeDirection(_lastSwipeTotalX))
+                {
+                    case PresentationUtils.SwipeDirection.Next:     NextItem();     break;
+                    case PresentationUtils.SwipeDirection.Previous: PreviousItem(); break;
+                }
                 _lastSwipeTotalX = 0;
             }
         }
@@ -369,10 +374,10 @@ public partial class PresentPage : ContentPage, IQueryAttributable
         if (e.Status == GestureStatus.Started) _startScale = _scale;
         else if (e.Status == GestureStatus.Running)
         {
-            _scale = Math.Clamp(_startScale * e.Scale, 1.0, 5.0);
+            _scale = PresentationUtils.ClampedScale(_startScale, e.Scale);
             ApplyZoom(_scale);
         }
-        else if (e.Status == GestureStatus.Completed && _scale < 1.1)
+        else if (e.Status == GestureStatus.Completed && PresentationUtils.ShouldResetZoom(_scale))
             ResetZoomPan();
     }
 #endif

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using PhotoPresenterAndroid.Models;
+using PhotoPresenterAndroid.Services;
 
 namespace PhotoPresenterAndroid.Pages;
 
@@ -29,7 +30,7 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
             {
                 var idx = _items.FindIndex(i => i.FullPath == lastFile);
                 // Use saved position unless it was the very last item (treat as "finished" → restart).
-                _index = (idx >= 0 && idx < _items.Count - 1) ? idx : 0;
+                _index = PresentationUtils.ResolveRestoredIndex(idx, _items.Count);
             }
             else
             {
@@ -39,7 +40,7 @@ public partial class BrowsePage : ContentPage, IQueryAttributable
 
         // Back navigation from PresentPage: update position to last-shown item.
         if (query.TryGetValue("LastIndex", out var li) && li is int lastIdx)
-            _index = Math.Clamp(lastIdx, 0, Math.Max(0, _items.Count - 1));
+            _index = PresentationUtils.ClampIndex(lastIdx, _items.Count);
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)

@@ -230,6 +230,76 @@ public class ManifestServiceTests
         Assert.True(result[1].IsVideo);
     }
 
+    // ── LoadAsync — additional edge cases ────────────────────────────────────
+
+    [Fact]
+    public async Task LoadAsync_Caption_EmptyString_IsPreservedNotConvertedToNull()
+    {
+        using var dir = new TempDirectory();
+        dir.CreateFile("photo.jpg");
+        WriteManifest(dir, """{"items":[{"file":"photo.jpg","caption":""}]}""");
+
+        var result = await ManifestService.LoadAsync(dir.Path);
+
+        // An explicit empty string in JSON should be preserved as "", not null
+        Assert.Equal("", result[0].Caption);
+    }
+
+    [Fact]
+    public async Task LoadAsync_Filename_WithSpaces_IsSupported()
+    {
+        using var dir = new TempDirectory();
+        dir.CreateFile("my photo.jpg");
+        WriteManifest(dir, """{"items":[{"file":"my photo.jpg"}]}""");
+
+        var result = await ManifestService.LoadAsync(dir.Path);
+
+        Assert.Single(result);
+        Assert.EndsWith("my photo.jpg", result[0].FullPath);
+    }
+
+    [Fact]
+    public async Task LoadAsync_DuplicateFilenames_BothIncluded()
+    {
+        using var dir = new TempDirectory();
+        dir.CreateFile("photo.jpg");
+        // Two manifest entries pointing to the same file — both should appear
+        WriteManifest(dir, """{"items":[{"file":"photo.jpg","caption":"First"},{"file":"photo.jpg","caption":"Second"}]}""");
+
+        var result = await ManifestService.LoadAsync(dir.Path);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("First",  result[0].Caption);
+        Assert.Equal("Second", result[1].Caption);
+    }
+
+    [Fact]
+    public async Task LoadAsync_CaptionWithNewline_IsPreserved()
+    {
+        using var dir = new TempDirectory();
+        dir.CreateFile("photo.jpg");
+        WriteManifest(dir, """{"items":[{"file":"photo.jpg","caption":"Line 1\nLine 2"}]}""");
+
+        var result = await ManifestService.LoadAsync(dir.Path);
+
+        Assert.Equal("Line 1\nLine 2", result[0].Caption);
+    }
+
+    [Fact]
+    public async Task LoadAsync_LargeManifest_AllSupportedItemsIncluded()
+    {
+        using var dir = new TempDirectory();
+        for (int i = 0; i < 20; i++)
+            dir.CreateFile($"photo{i:D2}.jpg");
+        var items = string.Join(",", Enumerable.Range(0, 20).Select(i => $@"{{""file"":""photo{i:D2}.jpg""}}"));
+        WriteManifest(dir, $$"""{ "items": [{{items}}] }""");
+
+        var result = await ManifestService.LoadAsync(dir.Path);
+
+        Assert.Equal(20, result.Count);
+        Assert.All(result, item => Assert.False(item.IsVideo));
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private static void WriteManifest(TempDirectory dir, string json) =>

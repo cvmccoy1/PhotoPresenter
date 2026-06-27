@@ -21,6 +21,7 @@
     <Compile Include="..\PhotoPresenterAndroid\Models\PresentationManifest.cs" />
     <Compile Include="..\PhotoPresenterAndroid\Services\ManifestService.cs" />
     <Compile Include="..\PhotoPresenterAndroid\Services\BitmapUtils.cs" />
+    <Compile Include="..\PhotoPresenterAndroid\Services\PresentationUtils.cs" />
   </ItemGroup>
 
   <ItemGroup>
